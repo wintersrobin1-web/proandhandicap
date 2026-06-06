@@ -289,8 +289,7 @@
     // Procaps und Ausgleichsregeln für zurückliegende/schwächere Teams
     {id:'a_leading_3_passes', active:true, type:'Ausgleichsregel', target:'leading', problem:'uneven', strength:'stark', title:'Führendes Team: 3 Pässe', text:'{team}: Ein Tor zählt nur nach mindestens 3 Pässen.', why:'Macht ein ungleiches Spiel gemeinsamer und spannender.'},
     {id:'a_leading_no_direct_goal', active:true, type:'Ausgleichsregel', target:'leading', problem:'uneven', strength:'stark', title:'Keine direkten Tore', text:'{team}: Direkte Tore nach Ballgewinn zählen nicht.', why:'Nimmt Tempo aus Überlegenheit und fördert Aufbau.'},
-    {id:'a_trailing_start_ball', active:true, type:'Procap', target:'trailing', problem:'uneven', strength:'leicht', title:'Ballbesitz nach Gegentor', text:'{team}: Nach jedem Gegentor startet ihr mit Ballbesitz.', why:'Hält das zurückliegende Team im Spiel.'},
-    {id:'a_trailing_3_sec', active:true, type:'Procap', target:'trailing', problem:'uneven', strength:'mittel', title:'Schutz beim ersten Pass', text:'{team}: Nach Ballgewinn habt ihr 3 Sekunden Schutz für den ersten Pass.', why:'Erleichtert Ballkontrolle und Anschlussaktionen.'},
+        {id:'a_trailing_3_sec', active:true, type:'Procap', target:'trailing', problem:'uneven', strength:'mittel', title:'Schutz beim ersten Pass', text:'{team}: Nach Ballgewinn habt ihr 3 Sekunden Schutz für den ersten Pass.', why:'Erleichtert Ballkontrolle und Anschlussaktionen.'},
     {id:'a_trailing_team_goal_double', active:true, type:'Procap', target:'trailing', problem:'uneven', strength:'mittel', title:'Comeback-Teamtor', text:'{team}: Euer nächstes Tor zählt doppelt, wenn 3 verschiedene Personen beteiligt waren.', why:'Belohnt Zusammenspiel statt Einzelaktion.'},
     {id:'a_trailing_joker_wall', active:true, type:'Procap', target:'trailing', problem:'uneven', strength:'stark', title:'Sicherer Neustart', text:'{team}: Nach Ballgewinn darf der erste Pass in die eigene Hälfte nicht direkt attackiert werden.', why:'Schafft eine sichere erste Anschlussaktion ohne Zusatzmaterial.'},
 
@@ -731,11 +730,18 @@
         addPick('trailing', {team:trailTeam, otherTeam:leadTeam}, intensity);
       }
 
-      // 3) Falls im führenden Team jemand wenig eingebunden war, keine zusätzliche Unterstützung, sondern nur eine kurze Einbindungs-Teamregel.
-      // Dadurch bleibt die Auswertung kompakt und die Verliererseite wird nicht zusätzlich benachteiligt.
+      // 3) Wenn Beteiligung eingetragen wurde, soll mindestens eine personenbezogene Karte erscheinen, sofern sinnvoll.
+      // Auch im führenden Team kann eine wenig eingebundene Person eine Einbindungshilfe bekommen;
+      // sie wird nicht bestraft, sondern über ein Procap ins Spiel geholt.
+      const hasIndividualRec = rec.some(x => /\b[A-ZÄÖÜ][^:]{1,40}:/.test(x.text || '') || /\bund\b/.test((x.text || '').split(':')[0] || ''));
+      if(!hasIndividualRec && rec.length<3){
+        if(trailLow.length){ addPick('low', namesCtx(trailLow, {team:trailTeam, otherTeam:leadTeam}), intensity); }
+        else if(leadLow.length){ addPick('low', namesCtx(leadLow, {team:leadTeam, otherTeam:trailTeam}), 'leicht', {maxStrength:'mittel'}); }
+        else if(leadDom.length){ addPick('dominant', namesCtx(leadDom.slice(0,1), {team:leadTeam, otherTeam:trailTeam}), Math.abs(diff)>=3 ? intensity : 'mittel', {maxStrength: Math.abs(diff)===2 ? 'mittel' : null}); }
+      }
+
       if(rec.length<3 && leadLow.length){
-        const r=(ruleCards||[]).find(x=>x.active!==false && x.target==='team' && (ruleSports(x).includes('general') || ruleSports(x).includes(currentSport) || currentSport==='all'));
-        if(r && !used.includes(r.id)){ used.push(r.id); addRuleRecommendation(rec,r,namesCtx(leadLow,{team:leadTeam, otherTeam:trailTeam})); }
+        addPick('low', namesCtx(leadLow, {team:leadTeam, otherTeam:trailTeam}), 'leicht', {maxStrength:'mittel'});
       }
       return rec.slice(0,3);
     }
