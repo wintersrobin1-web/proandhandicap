@@ -380,7 +380,7 @@
   function createFields(){
     const fc=parseInt($('fieldCount').value)||3; fields=[];
     for(let i=0;i<Math.min(fc, Math.floor(teams.length/2)); i++){
-      fields.push({id:makeId(), index:i, name:`Kleinfeld ${i+1}`, teamA:teams[i*2]?.id, teamB:teams[i*2+1]?.id, scoreA:0, scoreB:0, round:1, recommendations:[], lastObservation:null, timer:{remaining:getDefaultTimerSeconds(), running:false, startedAt:null, startedAtMs:null, endsAtMs:null}, updatedAt:nowIso(), updatedAtMs:nowMs()});
+      fields.push({id:makeId(), index:i, name:`Kleinfeld ${i+1}`, teamA:teams[i*2]?.id, teamB:teams[i*2+1]?.id, scoreA:0, scoreB:0, round:1, recommendations:[], lastObservation:null, observationDraft:{domA:'',lowA:'',domB:'',lowB:''}, timer:{remaining:getDefaultTimerSeconds(), running:false, startedAt:null, startedAtMs:null, endsAtMs:null}, updatedAt:nowIso(), updatedAtMs:nowMs()});
     }
   }
   function getTeam(id){ return teams.find(t=>t.id===id); }
@@ -395,12 +395,13 @@
   function renderAll(){ renderStudents(); renderTeams(); renderFieldsSummary(); renderGameFields(); renderRuleEditor(); refreshClassSelect(); $('className').value=currentClassName; saveLocal(); }
 
   // ---------------- GAME UI ----------------
-  function teamOptions(teamId){
+  function teamOptions(teamId, selected=''){
     const t=getTeam(teamId); if(!t) return '<option value="">--</option>';
-    return '<option value="">-- auswählen --</option>'+t.students.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+    return '<option value="">-- auswählen --</option>'+t.students.map(s=>`<option value="${s.id}" ${String(selected)===String(s.id)?'selected':''}>${escapeHtml(s.name)}</option>`).join('');
   }
   function fieldCardHtml(f, interactive=true, joined=false){
     const a=getTeam(f.teamA), b=getTeam(f.teamB); const mins=parseInt($('roundMinutes').value)||4;
+    const d=f.observationDraft||{};
     return `<div class="field" id="field-${f.id}">
       <div class="field-head"><strong>${escapeHtml(f.name)} · Runde ${f.round||1}</strong><span class="timer" data-timer-id="${f.id}">${formatTime(calcRemaining(f))}</span></div>
       <div style="padding:12px" class="grid">
@@ -413,13 +414,13 @@
         </div>
         <div class="two">
           <div class="side"><h4>${escapeHtml(a?.name||'Team A')}</h4>
-            <label>spielprägend<br><select class="select-wide" id="domA-${f.id}">${teamOptions(f.teamA)}</select></label><br><br>
-            <label>wenig eingebunden<br><select class="select-wide" id="lowA-${f.id}">${teamOptions(f.teamA)}</select></label>
+            <label>spielprägend<br><select class="select-wide" id="domA-${f.id}" onchange="updateObservation('${f.id}','domA',this.value)">${teamOptions(f.teamA,d.domA)}</select></label><br><br>
+            <label>wenig eingebunden<br><select class="select-wide" id="lowA-${f.id}" onchange="updateObservation('${f.id}','lowA',this.value)">${teamOptions(f.teamA,d.lowA)}</select></label>
             <div class="row" style="margin-top:8px"><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','A',1)">Tor +</button><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','A',-1)">Tor −</button></div>
           </div>
           <div class="side"><h4>${escapeHtml(b?.name||'Team B')}</h4>
-            <label>spielprägend<br><select class="select-wide" id="domB-${f.id}">${teamOptions(f.teamB)}</select></label><br><br>
-            <label>wenig eingebunden<br><select class="select-wide" id="lowB-${f.id}">${teamOptions(f.teamB)}</select></label>
+            <label>spielprägend<br><select class="select-wide" id="domB-${f.id}" onchange="updateObservation('${f.id}','domB',this.value)">${teamOptions(f.teamB,d.domB)}</select></label><br><br>
+            <label>wenig eingebunden<br><select class="select-wide" id="lowB-${f.id}" onchange="updateObservation('${f.id}','lowB',this.value)">${teamOptions(f.teamB,d.lowB)}</select></label>
             <div class="row" style="margin-top:8px"><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','B',1)">Tor +</button><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','B',-1)">Tor −</button></div>
           </div>
         </div>
@@ -465,6 +466,17 @@
     localPendingFields[f.id] = nowMs() + 1200;
   }
 
+  window.updateObservation=function(fid, key, value){
+    const f=fields.find(x=>x.id===fid); if(!f) return;
+    if(!f.observationDraft) f.observationDraft={domA:'',lowA:'',domB:'',lowB:''};
+    f.observationDraft[key]=value||'';
+    markFieldChanged(f);
+    // Nicht komplett neu rendern, damit die Bedienung stabil bleibt; andere Ansichten/Geräte erhalten den Live-Stand.
+    renderFieldsSummary();
+    if(selectedJoinedFieldId && selectedJoinedFieldId!==fid) refreshJoinedField();
+    pushLiveField(f);
+  };
+
   window.changeScore=function(fid, side, delta){ const f=fields.find(x=>x.id===fid); if(!f) return; if(side==='A') f.scoreA=Math.max(0,(f.scoreA||0)+delta); else f.scoreB=Math.max(0,(f.scoreB||0)+delta); markFieldChanged(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); pushLiveField(f); };
   window.startTimer=function(fid){
     const f=fields.find(x=>x.id===fid); if(!f) return;
@@ -482,15 +494,16 @@
     renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays();
     pushLiveField(f);
   };
-  window.resetFieldRound=function(fid){ const f=fields.find(x=>x.id===fid); if(f){f.scoreA=0;f.scoreB=0;f.recommendations=[];f.lastObservation=null;f.timer={remaining:getDefaultTimerSeconds(),running:false,startedAt:null,startedAtMs:null,endsAtMs:null}; markFieldChanged(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); pushLiveField(f);} };
+  window.resetFieldRound=function(fid){ const f=fields.find(x=>x.id===fid); if(f){f.scoreA=0;f.scoreB=0;f.recommendations=[];f.lastObservation=null;f.observationDraft={domA:'',lowA:'',domB:'',lowB:''};f.timer={remaining:getDefaultTimerSeconds(),running:false,startedAt:null,startedAtMs:null,endsAtMs:null}; markFieldChanged(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); pushLiveField(f);} };
 
   window.finishRound=function(fid){
     const f=fields.find(x=>x.id===fid); if(!f) return; f.timer={remaining:calcRemaining(f), running:false, startedAt:null, startedAtMs:null, endsAtMs:null}; markFieldChanged(f);
+    const draft=f.observationDraft||{};
     const obs={
-      domA:$('domA-'+fid)?.value||'', lowA:$('lowA-'+fid)?.value||'', domB:$('domB-'+fid)?.value||'', lowB:$('lowB-'+fid)?.value||'',
+      domA:$('domA-'+fid)?.value||draft.domA||'', lowA:$('lowA-'+fid)?.value||draft.lowA||'', domB:$('domB-'+fid)?.value||draft.domB||'', lowB:$('lowB-'+fid)?.value||draft.lowB||'',
       scoreA:f.scoreA||0, scoreB:f.scoreB||0, at:nowIso(), round:f.round||1
     };
-    f.lastObservation=obs; f.recommendations=makeRecommendations(f,obs); f.round=(f.round||1)+1; f.scoreA=0; f.scoreB=0;
+    f.lastObservation=obs; f.recommendations=makeRecommendations(f,obs); f.round=(f.round||1)+1; f.scoreA=0; f.scoreB=0; f.observationDraft={domA:'',lowA:'',domB:'',lowB:''};
     f.timer={remaining:getDefaultTimerSeconds(), running:false, startedAt:null, startedAtMs:null, endsAtMs:null};
     markFieldChanged(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); pushLiveField(f); notify('Runde ausgewertet. Regelkarte testen!');
   };
@@ -780,7 +793,7 @@
     await fb.deleteDoc(fb.doc(db,'teamsportSessions',currentRoom)); currentRoom=''; updateModePill(); $('roomInfo').textContent='Session gelöscht.'; notify('Live-Session gelöscht.');
   };
   window.clearRoundData=async function(){
-    fields=fields.map(f=>({...f, scoreA:0, scoreB:0, round:1, recommendations:[], lastObservation:null, timer:{remaining:getDefaultTimerSeconds(), running:false, startedAt:null, startedAtMs:null, endsAtMs:null}, updatedAt:nowIso(), updatedAtMs:nowMs()}));
+    fields=fields.map(f=>({...f, scoreA:0, scoreB:0, round:1, recommendations:[], lastObservation:null, observationDraft:{domA:'',lowA:'',domB:'',lowB:''}, timer:{remaining:getDefaultTimerSeconds(), running:false, startedAt:null, startedAtMs:null, endsAtMs:null}, updatedAt:nowIso(), updatedAtMs:nowMs()}));
     if(currentRoom && firebaseReady) await fb.updateDoc(fb.doc(db,'teamsportSessions',currentRoom), {fields, updatedAt:nowIso()});
     renderAll(); notify('Rundendaten gelöscht. Teams bleiben erhalten.');
   };
