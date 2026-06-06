@@ -25,6 +25,12 @@
     .field-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}.field{border:2px solid #dcfce7;border-radius:18px;background:#fff;overflow:hidden}.field-head{background:#f0fdf4;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #dcfce7}.score{font-size:34px;font-weight:900;text-align:center}.timer{font-variant-numeric:tabular-nums;font-size:26px;font-weight:900;color:#166534}.side{border:1px solid var(--border);border-radius:14px;padding:10px;background:#f8fafc}.side h4{margin:0 0 8px 0}.select-wide{width:100%}.recommend{margin-top:10px;border-radius:14px;padding:10px;background:#f8fafc;border:1px solid var(--border)}.recommend strong{display:block;margin-bottom:4px}.good{background:#ecfdf5;border-color:#bbf7d0}.warn{background:#fff7ed;border-color:#fed7aa}.danger{background:#fef2f2;border-color:#fecaca}.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:720px){.two{grid-template-columns:1fr}}
     .log{max-height:200px;overflow:auto;font-size:12px;background:#0f172a;color:#e2e8f0;border-radius:14px;padding:10px;white-space:pre-wrap}.notice{border-left:5px solid var(--green);background:#f8fafc;padding:10px;border-radius:12px;color:#334155;font-size:13px}.danger-text{color:#b91c1c}.ok-text{color:#15803d}.copy{user-select:all;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#f1f5f9;border:1px dashed #cbd5e1;padding:6px 8px;border-radius:10px}
     .rule-list{display:grid;gap:10px}.rule-card{border:1px solid var(--border);border-radius:16px;background:#fff;padding:12px}.rule-card.inactive{opacity:.55}.rule-card textarea{min-height:54px}.badge{display:inline-block;border-radius:999px;padding:2px 7px;background:#e2e8f0;font-size:11px;font-weight:800}.badge.procap{background:#dcfce7;color:#166534}.badge.handicap{background:#ffedd5;color:#9a3412}.badge.team{background:#dbeafe;color:#1d4ed8}
+
+    .qr-panel{margin-top:10px;border:1px solid var(--border);background:#f8fafc;border-radius:16px;padding:12px}
+    .qr-grid{display:grid;grid-template-columns:180px 1fr;gap:12px;align-items:center}
+    .qr-code{width:170px;height:170px;background:#fff;border:1px solid var(--border);border-radius:14px;display:flex;align-items:center;justify-content:center;padding:10px}
+    .qr-link{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word-break:break-all;background:white;border:1px dashed #cbd5e1;border-radius:12px;padding:8px}
+    @media(max-width:720px){.qr-grid{grid-template-columns:1fr}.qr-code{margin:auto}}
   </style>
 </head>
 <body>
@@ -99,6 +105,21 @@
         </div>
         <div id="roomInfo" class="muted" style="margin-top:8px"></div>
         <div class="row" style="margin-top:8px">
+          <button class="ghost" onclick="showIpadJoinAccess()">iPad-Link & QR anzeigen</button>
+          <button class="ghost" onclick="copyIpadJoinLink()">iPad-Link kopieren</button>
+        </div>
+        <div id="ipadJoinAccess" class="qr-panel hidden">
+          <div class="qr-grid">
+            <div id="ipadQrCode" class="qr-code"><span class="muted">QR</span></div>
+            <div>
+              <strong>Direktlink für iPads</strong>
+              <div class="muted" style="margin:4px 0 8px 0">Öffnet die iPad-Beitrittsseite und trägt den Raumcode automatisch ein.</div>
+              <div id="ipadJoinLink" class="qr-link"></div>
+              <div id="ipadJoinWarning" class="notice hidden" style="margin-top:8px;border-left-color:#ea580c">Hinweis: Dieser Direktlink funktioniert auf anderen iPads nur, wenn diese HTML-Datei online erreichbar ist, z. B. über GitHub Pages. Bei einer lokalen file://-Datei bitte die App auf den iPads öffnen und den Raumcode manuell eingeben.</div>
+            </div>
+          </div>
+        </div>
+        <div class="row" style="margin-top:8px">
           <button class="red" onclick="deleteLiveSession()">Session komplett löschen</button>
           <button class="orange" onclick="clearRoundData()">Nur Rundendaten löschen</button>
         </div>
@@ -159,7 +180,7 @@
     <aside class="grid">
       <div class="card">
         <h2>Pro-/Handicap bearbeiten</h2>
-        <div class="notice">Hier kannst du Regelkarten anpassen. Die App wählt nach Spielstand, Beteiligung und Hauptproblem passende Karten aus. Platzhalter: <span class="copy">{name}</span> und <span class="copy">{team}</span>.</div>
+        <div class="notice">Regelkarten anpassen, neu erstellen oder deaktivieren. Die App wählt anschließend nach Spielstand, Beteiligung und Hauptproblem passende Karten aus. In Regeltexten kannst du die Platzhalter {name} und {team} verwenden.</div>
         <h3>Neue / ausgewählte Karte</h3>
         <input type="hidden" id="ruleId" />
         <label>Aktiv <input type="checkbox" id="ruleActive" checked></label>
@@ -183,7 +204,6 @@
     </aside>
     <main class="card">
       <h2>Regelkarten-Pool</h2>
-      <div class="notice">Für den UB reicht ein kleiner, klarer Pool. Zu viele Karten machen die Auswertung unübersichtlich. Empfehlenswert: 2–3 Karten pro Problemtyp.</div>
       <div id="rulesContainer" class="rule-list" style="margin-top:12px"></div>
     </main>
   </section>
@@ -549,13 +569,66 @@
     if(!join) $('firebaseConfigInput').value=txt; else $('joinFirebaseConfigInput').value=txt;
     await initFirebaseFromConfig(txt);
   };
+
+  function makeIpadJoinLink(code){
+    const base = window.location.href.split('#')[0];
+    return `${base}#join=${encodeURIComponent(code)}`;
+  }
+
+  async function ensureQrLibrary(){
+    if(window.QRCode) return true;
+    return new Promise((resolve)=>{
+      const script=document.createElement('script');
+      script.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+      script.onload=()=>resolve(true);
+      script.onerror=()=>resolve(false);
+      document.head.appendChild(script);
+    });
+  }
+
+  window.showIpadJoinAccess=async function(){
+    const code=(currentRoom || $('roomCode').value || '').trim().toUpperCase();
+    if(!code) return notify('Erst Raum erstellen oder Raumcode eintragen.', true);
+    const link=makeIpadJoinLink(code);
+    $('ipadJoinAccess').classList.remove('hidden');
+    $('ipadJoinLink').textContent=link;
+    $('ipadJoinWarning').classList.toggle('hidden', !link.startsWith('file:'));
+    const box=$('ipadQrCode'); box.innerHTML='';
+    const ok=await ensureQrLibrary();
+    if(ok && window.QRCode){
+      new window.QRCode(box, {text:link, width:150, height:150, correctLevel: window.QRCode.CorrectLevel.M});
+    } else {
+      box.innerHTML='<span class="muted">QR konnte nicht geladen werden.<br>Link kopieren.</span>';
+    }
+  };
+
+  window.copyIpadJoinLink=async function(){
+    const code=(currentRoom || $('roomCode').value || '').trim().toUpperCase();
+    if(!code) return notify('Erst Raum erstellen oder Raumcode eintragen.', true);
+    const link=makeIpadJoinLink(code);
+    try{ await navigator.clipboard.writeText(link); notify('iPad-Link kopiert.'); }
+    catch(e){ $('ipadJoinAccess').classList.remove('hidden'); $('ipadJoinLink').textContent=link; notify('Kopieren nicht möglich – Link wird angezeigt.', true); }
+  };
+
+  async function handleDeepLinkJoin(){
+    const hash=window.location.hash.replace(/^#/, '');
+    if(!hash) return;
+    const params=new URLSearchParams(hash);
+    const code=params.get('join') || params.get('room');
+    if(!code) return;
+    switchView('player');
+    $('joinRoomCode').value=code.toUpperCase();
+    // Kurz warten, bis die Ansicht vollständig gerendert ist, dann automatisch beitreten.
+    setTimeout(()=>{ joinLiveSession(); }, 250);
+  }
+
   window.createLiveSession=async function(){
     if(!firebaseReady){ const ok=await initFirebaseFromConfig(getPreferredFirebaseConfigText(false)); if(!ok) return; }
     if(!teams.length || !fields.length) return notify('Erst Teams/Felder erstellen.', true);
     currentRoom = ($('roomCode').value.trim().toUpperCase() || `TEAM-${makeCode(3)}`).replace(/\s+/g,'-'); $('roomCode').value=currentRoom;
     const session={roomCode:currentRoom, className:currentClassName||$('className').value||'Klasse', teacherPin, createdAt:nowIso(), updatedAt:nowIso(), expiresAt:new Date(Date.now()+4*60*60*1000).toISOString(), students, teams, fields, ruleCards, settings:{roundMinutes:parseInt($('roundMinutes').value)||4, fieldCount:parseInt($('fieldCount').value)||3}};
     await fb.setDoc(fb.doc(db,'teamsportSessions',currentRoom), session);
-    subscribeRoom(currentRoom); updateModePill(); $('roomInfo').innerHTML=`Raumcode: <span class="copy">${currentRoom}</span> · PIN lokal: <span class="copy">${teacherPin}</span> · Ablauf: ${new Date(session.expiresAt).toLocaleTimeString('de-DE')}`; notify('Live-Session erstellt.');
+    subscribeRoom(currentRoom); updateModePill(); $('roomInfo').innerHTML=`Raumcode: <span class="copy">${currentRoom}</span> · PIN lokal: <span class="copy">${teacherPin}</span> · Ablauf: ${new Date(session.expiresAt).toLocaleTimeString('de-DE')}`; notify('Live-Session erstellt.'); showIpadJoinAccess();
   };
   function subscribeRoom(code){
     if(liveUnsub) liveUnsub();
@@ -599,7 +672,7 @@
   function escapeAttr(s){ return escapeHtml(s).replace(/`/g,'&#96;'); }
 
   // Init
-  loadLocal(); if(!ruleCards || !ruleCards.length) ruleCards=cloneDefaultRules(); refreshClassSelect(); $('firebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; $('joinFirebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; renderAll(); updateModePill(); updateJoinFieldSelect();
+  loadLocal(); if(!ruleCards || !ruleCards.length) ruleCards=cloneDefaultRules(); refreshClassSelect(); $('firebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; $('joinFirebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; renderAll(); updateModePill(); updateJoinFieldSelect(); handleDeepLinkJoin();
 
   // Make some functions global for inline handlers in module context
   Object.assign(window,{pauseTimer});
