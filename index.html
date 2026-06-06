@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Teamsport Pro- und Handicap Generator – Offline & Live</title>
+  <title>Teamsport Pro- und Handicap Generator – Offline & Live v10</title>
   <style>
     :root{
       --green:#16a34a; --green-dark:#15803d; --green-soft:#ecfdf5;
@@ -352,16 +352,29 @@
 
   // ---------------- TEAMS/FIELDS ----------------
   window.generateTeams = function(){
-    const active=students.filter(s=>!s.absent); if(active.length<4) return notify('Zu wenige aktive SuS.', true);
-    const size=parseInt($('teamSize').value)||3; const numTeams=Math.ceil(active.length/size);
-    const mode=$('teamMode').value;
-    let list=[...active];
-    if(mode==='balanced') list.sort((a,b)=>(b.skill||5)-(a.skill||5)); else list.sort(()=>Math.random()-.5);
-    teams=Array.from({length:numTeams},(_,i)=>({id:makeId(), name:`Team ${i+1}`, students:[]}));
-    if(mode==='balanced'){
-      list.forEach((s,i)=>{ const idx = Math.floor(i/numTeams)%2===0 ? i%numTeams : numTeams-1-(i%numTeams); teams[idx].students.push(s); });
-    } else list.forEach((s,i)=>teams[i%numTeams].students.push(s));
-    createFields(); renderAll(); notify('Teams und Felder erstellt.');
+    try{
+      const active=students.filter(s=>!s.absent);
+      if(active.length<4) return notify('Zu wenige aktive SuS.', true);
+      const size=Math.max(2, parseInt($('teamSize')?.value)||3);
+      const numTeams=Math.max(2, Math.ceil(active.length/size));
+      const mode=$('teamMode')?.value || 'balanced';
+      let list=[...active];
+      if(mode==='balanced') list.sort((a,b)=>(b.skill||5)-(a.skill||5)); else list.sort(()=>Math.random()-.5);
+      teams=Array.from({length:numTeams},(_,i)=>({id:makeId(), name:`Team ${i+1}`, students:[]}));
+      if(mode==='balanced'){
+        list.forEach((s,i)=>{ const idx = Math.floor(i/numTeams)%2===0 ? i%numTeams : numTeams-1-(i%numTeams); teams[idx].students.push(s); });
+      } else {
+        list.forEach((s,i)=>teams[i%numTeams].students.push(s));
+      }
+      createFields();
+      selectedJoinedFieldId='';
+      renderAll();
+      updateJoinFieldSelect();
+      notify(`Teams und ${fields.length} Kleinfeld(er) erstellt.`);
+    }catch(e){
+      console.error(e);
+      notify('Teams konnten nicht erstellt werden: '+(e.message||e), true);
+    }
   };
   function createFields(){
     const fc=parseInt($('fieldCount').value)||3; fields=[];
@@ -651,8 +664,13 @@
   };
 
   function makeIpadJoinLink(code){
-    const base = window.location.href.split('#')[0];
-    return `${base}#join=${encodeURIComponent(code)}`;
+    // Direktlink in die iPad-/Beitrittsansicht. Query-Parameter sind stabiler als nur Hash,
+    // besonders bei GitHub Pages und wenn vorher schon ein Hash gesetzt war.
+    const url = new URL(window.location.href);
+    url.searchParams.set('view','player');
+    url.searchParams.set('join', code);
+    url.hash = '';
+    return url.toString();
   }
 
   async function ensureQrLibrary(){
@@ -691,14 +709,15 @@
   };
 
   async function handleDeepLinkJoin(){
-    const hash=window.location.hash.replace(/^#/, '');
-    if(!hash) return;
-    const params=new URLSearchParams(hash);
-    const code=params.get('join') || params.get('room');
+    const searchParams = new URLSearchParams(window.location.search);
+    const hash = window.location.hash.replace(/^#/, '');
+    const hashParams = new URLSearchParams(hash);
+    const code = searchParams.get('join') || searchParams.get('room') || hashParams.get('join') || hashParams.get('room');
+    const view = searchParams.get('view') || hashParams.get('view');
+    if(view === 'player' || code) switchView('player');
     if(!code) return;
-    switchView('player');
     $('joinRoomCode').value=code.toUpperCase();
-    // Kurz warten, bis die Ansicht vollständig gerendert ist, dann automatisch beitreten.
+    $('joinInfo').textContent='Raumcode erkannt. Verbinde...';
     setTimeout(()=>{ joinLiveSession(); }, 250);
   }
 
@@ -755,9 +774,21 @@
     const code=$('joinRoomCode').value.trim().toUpperCase(); if(!code) return notify('Raumcode eingeben.', true);
     const snap=await fb.getDoc(fb.doc(db,'teamsportSessions',code)); if(!snap.exists()) return notify('Raum nicht gefunden.', true);
     currentRoom=code; const d=snap.data(); students=d.students||[]; teams=d.teams||[]; fields=d.fields||[]; ruleCards=d.ruleCards||ruleCards; if(d.settings?.roundMinutes) $('roundMinutes').value=d.settings.roundMinutes;
-    subscribeRoom(code); updateJoinFieldSelect(); updateModePill(); $('joinInfo').textContent=`Beigetreten: ${code}. Wähle dein Kleinfeld.`; notify('Live-Session beigetreten.');
+    renderAll();
+    subscribeRoom(code);
+    updateJoinFieldSelect();
+    updateModePill();
+    $('joinInfo').textContent=`Beigetreten: ${code}. Wähle dein Kleinfeld.`;
+    if(fields.length && !$('joinFieldSelect').value) $('joinFieldSelect').value=fields[0].id;
+    notify('Live-Session beigetreten.');
   };
-  function updateJoinFieldSelect(){ $('joinFieldSelect').innerHTML=fields.map(f=>`<option value="${f.id}">${escapeHtml(f.name)}: ${escapeHtml(getTeam(f.teamA)?.name||'A')} vs. ${escapeHtml(getTeam(f.teamB)?.name||'B')}</option>`).join(''); }
+  function updateJoinFieldSelect(){
+    const sel=$('joinFieldSelect'); if(!sel) return;
+    const prev=sel.value;
+    sel.innerHTML=(fields||[]).map(f=>`<option value="${f.id}">${escapeHtml(f.name)}: ${escapeHtml(getTeam(f.teamA)?.name||'A')} vs. ${escapeHtml(getTeam(f.teamB)?.name||'B')}</option>`).join('');
+    if(prev && fields.some(f=>f.id===prev)) sel.value=prev;
+    else if(fields.length) sel.value=fields[0].id;
+  }
   window.openJoinedField=function(){ const id=$('joinFieldSelect').value; const f=fields.find(x=>x.id===id); if(!f) return; selectedJoinedFieldId=id; $('joinedFieldContainer').innerHTML=fieldCardHtml(f,true,true); };
 
   // ---------------- HELPERS ----------------
