@@ -271,11 +271,13 @@
 
     // Procaps für wenig beteiligte Einzelpersonen
     {id:'p_low_3_sec', active:true, type:'Procap', target:'low', problem:'any', strength:'mittel', title:'3-Sekunden-Schutz', text:'{name}: Nach deiner Ballannahme hast du 3 Sekunden Schutz vor direktem Angriff.', why:'Gibt Zeit für Ballkontrolle und Entscheidung.'},
-    {id:'p_low_goal_if_involved', active:true, type:'Procap', target:'low', problem:'solo', strength:'mittel', title:'Einbindungsbonus', text:'{team}: Ein Tor zählt doppelt, wenn {name} am Angriff beteiligt war.', why:'Macht Einbindung zum gemeinsamen Teamziel.'},
-    {id:'p_low_pass_bonus', active:true, type:'Procap', target:'low', problem:'passes', strength:'leicht', title:'Pass-Bonus', text:'Ein gelungener Pass von {name} zählt als Zusatzpunkt für {team}.', why:'Wertet aktive Beteiligung niedrigschwellig auf.'},
+    {id:'p_low_goal_if_involved', active:true, type:'Procap', target:'low', problem:'solo', strength:'mittel', title:'Einbindungsbonus', text:'{team}: Das nächste Tor zählt doppelt, wenn {name} vorher am Angriff beteiligt war.', why:'Fördert Einbindung, bleibt aber an ein echtes Tor gekoppelt.'},
+    {id:'p_low_goal_if_involved_once', active:true, type:'Procap', target:'low', problem:'any', strength:'leicht', title:'Einmaliger Einbindungsbonus', text:'{team}: Maximal einmal in dieser Runde zählt ein Tor doppelt, wenn {name} vorher am Angriff beteiligt war.', why:'Milder Bonus für mehr Beteiligung ohne Punkte-Farming.'},
+    {id:'p_low_goal_if_involved_all', active:true, type:'Procap', target:'low', problem:'uneven', strength:'stark', title:'Starker Einbindungsbonus', text:'{team}: Jedes Tor zählt doppelt, wenn {name} vorher am Angriff beteiligt war.', why:'Starker Ausgleich bei deutlichem Rückstand und geringer Beteiligung.'},
+    {id:'p_low_pass_bonus', active:false, type:'Procap', target:'low', problem:'passes', strength:'leicht', title:'Pass-Bonus (deaktiviert)', text:'Ein gelungener Pass von {name} zählt als Zusatzpunkt für {team}.', why:'Deaktiviert: kann zu Punkte-Farming führen. Besser sind Tor-Boni mit Beteiligung.'},
     {id:'p_low_safe_zone', active:true, type:'Procap', target:'low', problem:'pressure', strength:'stark', title:'Sicherer Aufbau', text:'{name}: Wenn du in der eigenen Hälfte angespielt wirst, hast du 3 Sekunden Schutz.', why:'Gibt Sicherheit ohne zusätzliche Markierungen.'},
     {id:'p_low_first_pass', active:true, type:'Procap', target:'low', problem:'pressure', strength:'mittel', title:'Sicherer erster Pass', text:'{name}: Nach Ballgewinn darfst du den ersten Pass ungestört spielen.', why:'Erleichtert den Einstieg in den Angriff.'},
-    {id:'p_low_goal_double', active:true, type:'Procap', target:'low', problem:'any', strength:'stark', title:'Mut-Tor', text:'Ein Tor von {name} zählt doppelt.', why:'Kann zurückhaltende SuS motivieren, Verantwortung zu übernehmen.'},
+    {id:'p_low_goal_double', active:false, type:'Procap', target:'low', problem:'any', strength:'stark', title:'Mut-Tor (deaktiviert)', text:'Ein Tor von {name} zählt doppelt.', why:'Deaktiviert: stärkerer Fokus auf Einbindung vor dem Tor statt nur auf Einzelabschluss.'},
     {id:'p_low_joker', active:true, type:'Procap', target:'low', problem:'pressure', strength:'stark', title:'Joker-Anspielstation', text:'{name} darf als Jokerperson jederzeit angespielt werden und beim ersten Kontakt nicht direkt attackiert werden.', why:'Schafft eine sichere, wiederkehrende Beteiligungsrolle.'},
 
     // Teamregeln gegen Soloaktionen und zu wenig Passspiel
@@ -310,7 +312,7 @@
     // Fußball-spezifisch
     {id:'fu_dom_weak_foot', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['football'], title:'Schwacher Fuß', text:'{name}: Tore zählen für dich nur mit deinem schwächeren Fuß.', why:'Bremst dominante Spieler:innen, ohne sie aus dem Spiel zu nehmen.'},
     {id:'fu_dom_two_touch', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['football'], title:'Zwei-Kontakt-Regel', text:'{name}: Du darfst maximal zwei Ballkontakte haben, dann muss ein Pass kommen.', why:'Fördert Orientierung vor der Ballannahme und schnelles Zusammenspiel.'},
-    {id:'fu_low_goal_double', active:true, type:'Procap', target:'low', problem:'any', strength:'stark', sports:['football'], title:'Doppeltes Tor', text:'Ein Tor von {name} zählt doppelt.', why:'Motiviert wenig beteiligte SuS, aktiv den Abschluss zu suchen.'},
+    {id:'fu_low_goal_double', active:false, type:'Procap', target:'low', problem:'any', strength:'stark', sports:['football'], title:'Doppeltes Tor (optional)', text:'Ein Tor von {name} zählt doppelt.', why:'Optional: sehr starker Abschlussbonus, nur gezielt aktivieren.'},
     {id:'fu_team_no_direct_goal', active:true, type:'Teamregel', target:'team', problem:'any', strength:'mittel', sports:['football'], title:'Kein Direkt-Solo-Tor', text:'{team}: Ein Tor zählt nur, wenn vorher mindestens ein Pass gespielt wurde.', why:'Macht Fußball stärker zum Zusammenspiel.'},
 
     {id:'football_pair_handhold', active:true, type:'Handicap', target:'leading', problem:'uneven', strength:'mittel', sports:['football'], title:'Handfassung-Duo', text:'{team}: Zwei Personen spielen eine Runde als Handfassung-Duo. Kein Ziehen, kein Blocken.', why:'Geeignet für Fußball-Kleinfeld: Überlegenheit wird gebremst, Absprachen und gemeinsames Bewegen werden wichtiger.'},
@@ -750,8 +752,8 @@
     if(domA.length){ addPick('dominant', namesCtx(domA.slice(0,1), {team:teamA, otherTeam:teamB}), 'leicht', {avoidNoGoal:true, maxStrength:'leicht'}); }
     if(domB.length && rec.length<2){ addPick('dominant', namesCtx(domB.slice(0,1), {team:teamB, otherTeam:teamA}), 'leicht', {avoidNoGoal:true, maxStrength:'leicht'}); }
 
-    if(lowA.length && rec.length<3){ addPick('low', namesCtx(lowA, {team:teamA, otherTeam:teamB}), hasDom?'mittel':'stark'); }
-    if(lowB.length && rec.length<3){ addPick('low', namesCtx(lowB, {team:teamB, otherTeam:teamA}), hasDom?'mittel':'stark'); }
+    if(lowA.length && rec.length<3){ addPick('low', namesCtx(lowA, {team:teamA, otherTeam:teamB}), 'mittel'); }
+    if(lowB.length && rec.length<3){ addPick('low', namesCtx(lowB, {team:teamB, otherTeam:teamA}), 'mittel'); }
 
     // Wenn keine auffälligen Personen eingetragen sind: leichte gemeinsame Challenge.
     if(rec.length===0){ addPick('all',{team:'Beide Teams'},'leicht') || addPick('team',{team:'Beide Teams'},'mittel'); }
