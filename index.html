@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Teamsport Pro- und Handicap Generator – Offline & Live v10</title>
+  <title>Teamsport Pro- und Handicap Generator – Offline & Live v14</title>
   <style>
     :root{
       --green:#16a34a; --green-dark:#15803d; --green-soft:#ecfdf5;
@@ -22,7 +22,7 @@
     .tabs{display:flex;gap:8px;flex-wrap:wrap}.tab{background:#f1f5f9}.tab.active{background:#166534;color:white}.hidden{display:none!important}.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:#f1f5f9;font-size:12px;font-weight:700}.pill.live{background:#fee2e2;color:#991b1b}.pill.offline{background:#dcfce7;color:#166534}
     .students{max-height:240px;overflow:auto;display:flex;flex-direction:column;gap:6px}.student{display:flex;align-items:center;justify-content:space-between;gap:6px;border:1px solid var(--border);border-radius:12px;padding:7px 9px;background:#fff}.student.absent{opacity:.45;text-decoration:line-through}.student input[type=checkbox]{transform:scale(1.05)}
     .teams{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.team{border:1px solid var(--border);border-radius:16px;overflow:hidden;background:#fff}.team-head{padding:8px 10px;background:var(--green-soft);border-bottom:1px solid #dcfce7;font-weight:800;color:#166534;display:flex;justify-content:space-between}.team ul{margin:0;padding:10px 16px}.team li{margin:5px 0}
-    .field-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}.field{border:2px solid #dcfce7;border-radius:18px;background:#fff;overflow:hidden}.field-head{background:#f0fdf4;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #dcfce7}.score{font-size:34px;font-weight:900;text-align:center}.timer{font-variant-numeric:tabular-nums;font-size:26px;font-weight:900;color:#166534}.side{border:1px solid var(--border);border-radius:14px;padding:10px;background:#f8fafc}.side h4{margin:0 0 8px 0}.select-wide{width:100%}.recommend{margin-top:10px;border-radius:14px;padding:10px;background:#f8fafc;border:1px solid var(--border)}.recommend strong{display:block;margin-bottom:4px}.good{background:#ecfdf5;border-color:#bbf7d0}.warn{background:#fff7ed;border-color:#fed7aa}.danger{background:#fef2f2;border-color:#fecaca}.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:720px){.two{grid-template-columns:1fr}}
+    .field-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}.field{border:2px solid #dcfce7;border-radius:18px;background:#fff;overflow:hidden}.field-head{background:#f0fdf4;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #dcfce7}.score{font-size:34px;font-weight:900;text-align:center}.timer{font-variant-numeric:tabular-nums;font-size:26px;font-weight:900;color:#166534}.side{border:1px solid var(--border);border-radius:14px;padding:10px;background:#f8fafc}.side h4{margin:0 0 8px 0}.select-wide{width:100%}.recommend{margin-top:10px;border-radius:14px;padding:10px;background:#f8fafc;border:1px solid var(--border)}.recommend strong{display:block;margin-bottom:4px}.rotation-hint{margin-top:8px;padding:7px 9px;border-radius:12px;background:#f8fafc;border:1px dashed #cbd5e1;color:#475569;font-size:12px}.good{background:#ecfdf5;border-color:#bbf7d0}.warn{background:#fff7ed;border-color:#fed7aa}.danger{background:#fef2f2;border-color:#fecaca}.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:720px){.two{grid-template-columns:1fr}}
     .log{max-height:200px;overflow:auto;font-size:12px;background:#0f172a;color:#e2e8f0;border-radius:14px;padding:10px;white-space:pre-wrap}.notice{border-left:5px solid var(--green);background:#f8fafc;padding:10px;border-radius:12px;color:#334155;font-size:13px}.danger-text{color:#b91c1c}.ok-text{color:#15803d}.copy{user-select:all;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#f1f5f9;border:1px dashed #cbd5e1;padding:6px 8px;border-radius:10px}
     .rule-list{display:grid;gap:10px}.rule-card{border:1px solid var(--border);border-radius:16px;background:#fff;padding:12px}.rule-card.inactive{opacity:.55}.rule-card textarea{min-height:54px}.badge{display:inline-block;border-radius:999px;padding:2px 7px;background:#e2e8f0;font-size:11px;font-weight:800}.badge.procap{background:#dcfce7;color:#166534}.badge.handicap{background:#ffedd5;color:#9a3412}.badge.team{background:#dbeafe;color:#1d4ed8}
 
@@ -74,7 +74,7 @@
       <div class="card">
         <h2>2. Teams erstellen</h2>
         <div class="two">
-          <label>Teamgröße<br><input type="number" id="teamSize" min="2" max="6" value="3" style="width:100%"></label>
+          <label>Spieler:innen auf dem Feld pro Team<br><input type="number" id="teamSize" min="2" max="5" value="3" style="width:100%"></label>
           <label>Anzahl Kleinfelder<br><input type="number" id="fieldCount" min="1" max="6" value="3" style="width:100%"></label>
         </div>
         <div class="two" style="margin-top:8px">
@@ -82,7 +82,8 @@
           <label>Gruppenlogik<br><select id="teamMode" style="width:100%"><option value="balanced">grob ausgleichen</option><option value="random">zufällig</option></select></label>
         </div>
         <button class="primary full" style="margin-top:12px" onclick="generateTeams()">Teams & Felder erstellen</button>
-        <div class="notice" style="margin-top:10px">Tipp für Datenschutz: Für Live-Sessions besser Kürzel/Nummern nutzen und nach der Stunde löschen.</div>
+        <div class="notice" style="margin-top:10px">Tipp: Wenn die Gruppengröße nicht aufgeht, werden automatisch Wechselspieler:innen den Teams zugeordnet. Nach Toren erinnert die App diskret an Rotation.</div>
+        <div class="notice" style="margin-top:8px">Datenschutz: Für Live-Sessions besser Kürzel/Nummern nutzen und nach der Stunde löschen.</div>
       </div>
 
       <div class="card">
@@ -356,37 +357,52 @@
     try{
       const active=students.filter(s=>!s.absent);
       if(active.length<4) return notify('Zu wenige aktive SuS.', true);
-      const size=Math.max(2, parseInt($('teamSize')?.value)||3);
-      const numTeams=Math.max(2, Math.ceil(active.length/size));
+      const onField=Math.max(2, parseInt($('teamSize')?.value)||3);
+      const requestedFields=Math.max(1, parseInt($('fieldCount')?.value)||3);
+      // Feldanzahl ist jetzt leitend: Pro Kleinfeld entstehen zwei Teams; übrige SuS werden als Wechselspieler:innen in diese Teams verteilt.
+      // Mindestens 2 SuS pro Team müssen vorhanden sein, sonst wird die tatsächliche Feldzahl reduziert.
+      const actualFields=Math.max(1, Math.min(requestedFields, Math.floor(active.length/4) || 1));
+      const numTeams=actualFields*2;
       const mode=$('teamMode')?.value || 'balanced';
       let list=[...active];
       if(mode==='balanced') list.sort((a,b)=>(b.skill||5)-(a.skill||5)); else list.sort(()=>Math.random()-.5);
-      teams=Array.from({length:numTeams},(_,i)=>({id:makeId(), name:`Team ${i+1}`, students:[]}));
+      teams=Array.from({length:numTeams},(_,i)=>({id:makeId(), name:`Team ${i+1}`, students:[], onFieldSize:onField}));
       if(mode==='balanced'){
         list.forEach((s,i)=>{ const idx = Math.floor(i/numTeams)%2===0 ? i%numTeams : numTeams-1-(i%numTeams); teams[idx].students.push(s); });
       } else {
         list.forEach((s,i)=>teams[i%numTeams].students.push(s));
       }
-      createFields();
+      createFields(actualFields, onField);
       selectedJoinedFieldId='';
       renderAll();
       updateJoinFieldSelect();
-      notify(`Teams und ${fields.length} Kleinfeld(er) erstellt.`);
+      const hasSubs=teams.some(t=>t.students.length>onField);
+      notify(`${teams.length} Teams und ${fields.length} Kleinfeld(er) erstellt.${hasSubs?' Wechselspieler:innen sind automatisch zugeteilt.':''}`);
     }catch(e){
       console.error(e);
       notify('Teams konnten nicht erstellt werden: '+(e.message||e), true);
     }
   };
-  function createFields(){
-    const fc=parseInt($('fieldCount').value)||3; fields=[];
+  function createFields(fieldCount=null, onFieldSize=null){
+    const fc=fieldCount ?? (parseInt($('fieldCount').value)||3);
+    const onField=onFieldSize ?? (parseInt($('teamSize')?.value)||3);
+    fields=[];
     for(let i=0;i<Math.min(fc, Math.floor(teams.length/2)); i++){
-      fields.push({id:makeId(), index:i, name:`Kleinfeld ${i+1}`, teamA:teams[i*2]?.id, teamB:teams[i*2+1]?.id, scoreA:0, scoreB:0, round:1, recommendations:[], lastObservation:null, observationDraft:{domA:'',lowA:'',domB:'',lowB:''}, timer:{remaining:getDefaultTimerSeconds(), running:false, startedAt:null, startedAtMs:null, endsAtMs:null}, updatedAt:nowIso(), updatedAtMs:nowMs()});
+      const ta=teams[i*2]?.id, tb=teams[i*2+1]?.id;
+      fields.push({id:makeId(), index:i, name:`Kleinfeld ${i+1}`, teamA:ta, teamB:tb, onFieldSize:onField, rotationAfterGoal:((getTeam(ta)?.students?.length||0)>onField || (getTeam(tb)?.students?.length||0)>onField), rotationHint:'', rotationHintAtMs:null, scoreA:0, scoreB:0, round:1, recommendations:[], lastObservation:null, observationDraft:{domA:'',lowA:'',domB:'',lowB:''}, timer:{remaining:getDefaultTimerSeconds(), running:false, startedAt:null, startedAtMs:null, endsAtMs:null}, updatedAt:nowIso(), updatedAtMs:nowMs()});
     }
   }
   function getTeam(id){ return teams.find(t=>t.id===id); }
+  function teamRoleHint(t, onField){
+    if(!t) return '';
+    const n=t.students.length;
+    if(n>onField) return `<div class="muted" style="margin:6px 0 0 0">${onField} auf dem Feld · ${n-onField} Wechsel/Coach</div>`;
+    return `<div class="muted" style="margin:6px 0 0 0">${Math.min(n,onField)} auf dem Feld</div>`;
+  }
   function renderTeams(){
     if(!teams.length){ $('teamsContainer').innerHTML='<div class="muted">Noch keine Teams erstellt.</div>'; return; }
-    $('teamsContainer').innerHTML='<div class="teams">'+teams.map(t=>`<div class="team"><div class="team-head"><span>${escapeHtml(t.name)}</span><span>${t.students.length}</span></div><ul>${t.students.map(s=>`<li>${escapeHtml(s.name)}</li>`).join('')}</ul></div>`).join('')+'</div>';
+    const onField=Math.max(2, parseInt($('teamSize')?.value)||3);
+    $('teamsContainer').innerHTML='<div class="teams">'+teams.map(t=>`<div class="team"><div class="team-head"><span>${escapeHtml(t.name)}</span><span>${t.students.length}</span></div><div style="padding:0 12px">${teamRoleHint(t, t.onFieldSize||onField)}</div><ul>${t.students.map(s=>`<li>${escapeHtml(s.name)}</li>`).join('')}</ul></div>`).join('')+'</div>';
   }
   function renderFieldsSummary(){
     if(!fields.length){ $('fieldsContainer').innerHTML='<div class="muted">Nach dem Erstellen erscheinen hier die Kleinfelder.</div>'; return; }
@@ -406,6 +422,7 @@
       <div class="field-head"><strong>${escapeHtml(f.name)} · Runde ${f.round||1}</strong><span class="timer" data-timer-id="${f.id}">${formatTime(calcRemaining(f))}</span></div>
       <div style="padding:12px" class="grid">
         <div class="score"><span id="score-${f.id}">${f.scoreA||0} : ${f.scoreB||0}</span></div>
+        ${rotationHintHtml(f)}
         <div class="row" style="justify-content:center">
           <button class="primary" ${interactive?'':'disabled'} onclick="startTimer('${f.id}')">Start</button>
           <button class="ghost" ${interactive?'':'disabled'} onclick="pauseTimer('${f.id}')">Pause</button>
@@ -413,12 +430,12 @@
           <button class="ghost" ${interactive?'':'disabled'} onclick="resetFieldRound('${f.id}')">Reset</button>
         </div>
         <div class="two">
-          <div class="side"><h4>${escapeHtml(a?.name||'Team A')}</h4>
+          <div class="side"><h4>${escapeHtml(a?.name||'Team A')}</h4>${teamRoleHint(a, f.onFieldSize || parseInt($('teamSize')?.value)||3)}
             <label>spielprägend<br><select class="select-wide" id="domA-${f.id}" onchange="updateObservation('${f.id}','domA',this.value)">${teamOptions(f.teamA,d.domA)}</select></label><br><br>
             <label>wenig eingebunden<br><select class="select-wide" id="lowA-${f.id}" onchange="updateObservation('${f.id}','lowA',this.value)">${teamOptions(f.teamA,d.lowA)}</select></label>
             <div class="row" style="margin-top:8px"><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','A',1)">Tor +</button><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','A',-1)">Tor −</button></div>
           </div>
-          <div class="side"><h4>${escapeHtml(b?.name||'Team B')}</h4>
+          <div class="side"><h4>${escapeHtml(b?.name||'Team B')}</h4>${teamRoleHint(b, f.onFieldSize || parseInt($('teamSize')?.value)||3)}
             <label>spielprägend<br><select class="select-wide" id="domB-${f.id}" onchange="updateObservation('${f.id}','domB',this.value)">${teamOptions(f.teamB,d.domB)}</select></label><br><br>
             <label>wenig eingebunden<br><select class="select-wide" id="lowB-${f.id}" onchange="updateObservation('${f.id}','lowB',this.value)">${teamOptions(f.teamB,d.lowB)}</select></label>
             <div class="row" style="margin-top:8px"><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','B',1)">Tor +</button><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','B',-1)">Tor −</button></div>
@@ -427,6 +444,15 @@
         <div id="rec-${f.id}">${recommendationsHtml(f)}</div>
       </div>
     </div>`;
+  }
+  function rotationHintHtml(f){
+    const a=getTeam(f.teamA), b=getTeam(f.teamB);
+    const onField=f.onFieldSize || Math.max(2, parseInt($('teamSize')?.value)||3);
+    const hasSubs=(a?.students?.length||0)>onField || (b?.students?.length||0)>onField;
+    if(!hasSubs) return '';
+    const recent=f.rotationHint && f.rotationHintAtMs && (nowMs()-Number(f.rotationHintAtMs)<15000);
+    const msg=recent ? f.rotationHint : 'Bei einem Tor bitte kurz selbstständig rotieren.';
+    return `<div class="rotation-hint">↔️ ${escapeHtml(msg)}</div>`;
   }
   function renderGameFields(){ const c=$('gameFieldsContainer'); if(!c) return; c.innerHTML = fields.length ? fields.map(f=>fieldCardHtml(f,true)).join('') : '<div class="muted">Noch keine Felder vorhanden.</div>'; }
   function refreshJoinedField(){
@@ -477,7 +503,19 @@
     pushLiveField(f);
   };
 
-  window.changeScore=function(fid, side, delta){ const f=fields.find(x=>x.id===fid); if(!f) return; if(side==='A') f.scoreA=Math.max(0,(f.scoreA||0)+delta); else f.scoreB=Math.max(0,(f.scoreB||0)+delta); markFieldChanged(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); pushLiveField(f); };
+  window.changeScore=function(fid, side, delta){
+    const f=fields.find(x=>x.id===fid); if(!f) return;
+    if(side==='A') f.scoreA=Math.max(0,(f.scoreA||0)+delta); else f.scoreB=Math.max(0,(f.scoreB||0)+delta);
+    if(delta>0){
+      const a=getTeam(f.teamA), b=getTeam(f.teamB);
+      const onField=f.onFieldSize || Math.max(2, parseInt($('teamSize')?.value)||3);
+      if((a?.students?.length||0)>onField || (b?.students?.length||0)>onField){
+        f.rotationHint='Tor notiert – bitte in beiden Teams kurz wechseln/rotieren.';
+        f.rotationHintAtMs=nowMs();
+      }
+    }
+    markFieldChanged(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); pushLiveField(f);
+  };
   window.startTimer=function(fid){
     const f=fields.find(x=>x.id===fid); if(!f) return;
     const rem=calcRemaining(f) || getDefaultTimerSeconds();
@@ -494,7 +532,7 @@
     renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays();
     pushLiveField(f);
   };
-  window.resetFieldRound=function(fid){ const f=fields.find(x=>x.id===fid); if(f){f.scoreA=0;f.scoreB=0;f.recommendations=[];f.lastObservation=null;f.observationDraft={domA:'',lowA:'',domB:'',lowB:''};f.timer={remaining:getDefaultTimerSeconds(),running:false,startedAt:null,startedAtMs:null,endsAtMs:null}; markFieldChanged(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); pushLiveField(f);} };
+  window.resetFieldRound=function(fid){ const f=fields.find(x=>x.id===fid); if(f){f.scoreA=0;f.scoreB=0;f.recommendations=[];f.lastObservation=null;f.observationDraft={domA:'',lowA:'',domB:'',lowB:''};f.timer={remaining:getDefaultTimerSeconds(),running:false,startedAt:null,startedAtMs:null,endsAtMs:null}; f.rotationHint=''; f.rotationHintAtMs=null; markFieldChanged(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); pushLiveField(f);} };
 
   window.finishRound=function(fid){
     const f=fields.find(x=>x.id===fid); if(!f) return; f.timer={remaining:calcRemaining(f), running:false, startedAt:null, startedAtMs:null, endsAtMs:null}; markFieldChanged(f);
@@ -505,6 +543,7 @@
     };
     f.lastObservation=obs; f.recommendations=makeRecommendations(f,obs); f.round=(f.round||1)+1; f.scoreA=0; f.scoreB=0; f.observationDraft={domA:'',lowA:'',domB:'',lowB:''};
     f.timer={remaining:getDefaultTimerSeconds(), running:false, startedAt:null, startedAtMs:null, endsAtMs:null};
+    f.rotationHint=''; f.rotationHintAtMs=null;
     markFieldChanged(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); pushLiveField(f); notify('Runde ausgewertet. Regelkarte testen!');
   };
   function studentName(id){ return students.find(s=>s.id===id)?.name || teams.flatMap(t=>t.students).find(s=>s.id===id)?.name || 'Person'; }
