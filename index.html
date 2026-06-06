@@ -457,6 +457,14 @@
   }
   setInterval(updateTimerDisplays, 500);
 
+  function markFieldChanged(f){
+    if(!f) return;
+    f.updatedAt = nowIso();
+    f.updatedAtMs = nowMs();
+    // Kurzfristig lokale Eingabe schützen, bis Firestore die eigene Änderung zurückliefert.
+    localPendingFields[f.id] = nowMs() + 1200;
+  }
+
   window.changeScore=function(fid, side, delta){ const f=fields.find(x=>x.id===fid); if(!f) return; if(side==='A') f.scoreA=Math.max(0,(f.scoreA||0)+delta); else f.scoreB=Math.max(0,(f.scoreB||0)+delta); markFieldChanged(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); pushLiveField(f); };
   window.startTimer=function(fid){
     const f=fields.find(x=>x.id===fid); if(!f) return;
@@ -737,9 +745,11 @@
     const now = nowMs();
     return incomingList.map(nf => {
       const lf = currentById[nf.id];
+      // Nur eine gerade lokal gedrückte Eingabe kurz schützen. Danach ist immer der Live-Stand maßgeblich.
+      // Wichtig: Nicht nach Geräte-Uhrzeit vergleichen, weil iPad und Lehrkraftgerät abweichende Date.now()-Werte haben können.
       const pending = localPendingFields[nf.id] && localPendingFields[nf.id] > now;
-      if(pending && lf && Number(lf.updatedAtMs||0) > Number(nf.updatedAtMs||0)) return lf;
-      if(lf && Number(nf.updatedAtMs||0) >= Number(lf.updatedAtMs||0)) delete localPendingFields[nf.id];
+      if(pending && lf) return lf;
+      delete localPendingFields[nf.id];
       return nf;
     });
   }
@@ -753,7 +763,11 @@
   async function pushLiveField(f){
     saveLocal();
     if(!currentRoom || !firebaseReady) return;
-    try{ await fb.updateDoc(fb.doc(db,'teamsportSessions',currentRoom), {fields, updatedAt:nowIso()}); }catch(e){ console.warn(e); notify('Live-Speichern fehlgeschlagen: '+(e.code||e.message||e), true); }
+    try{
+      await fb.updateDoc(fb.doc(db,'teamsportSessions',currentRoom), {fields, updatedAt:nowIso()});
+    }catch(e){
+      console.warn(e); notify('Live-Speichern fehlgeschlagen: '+(e.code||e.message||e), true);
+    }
   }
   async function pushLiveRules(){
     saveLocal();
@@ -781,6 +795,7 @@
     updateModePill();
     $('joinInfo').textContent=`Beigetreten: ${code}. Wähle dein Kleinfeld.`;
     if(fields.length && !$('joinFieldSelect').value) $('joinFieldSelect').value=fields[0].id;
+    if(fields.length) openJoinedField();
     notify('Live-Session beigetreten.');
   };
   function updateJoinFieldSelect(){
@@ -799,8 +814,6 @@
   // Init
   loadLocal(); if(!ruleCards || !ruleCards.length) ruleCards=cloneDefaultRules(); refreshClassSelect(); $('firebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; $('joinFirebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; renderAll(); updateModePill(); updateJoinFieldSelect(); handleDeepLinkJoin();
 
-  // Make some functions global for inline handlers in module context
-  Object.assign(window,{pauseTimer});
 </script>
 </body>
 </html>
