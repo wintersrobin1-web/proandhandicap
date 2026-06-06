@@ -229,24 +229,54 @@
   };
   const DEFAULT_FIREBASE_CONFIG_TEXT = 'const firebaseConfig = ' + JSON.stringify(DEFAULT_FIREBASE_CONFIG, null, 2) + ';';
   let currentRoom = '';
+  let selectedJoinedFieldId = '';
   let liveUnsub = null;
   let teacherPin = localStorage.getItem('fbph_teacher_pin') || makeCode(6);
   localStorage.setItem('fbph_teacher_pin', teacherPin);
 
   const DEFAULT_RULE_CARDS = [
-    {id:'h_dom_no_goal', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', title:'Spielmacher-Challenge', text:'{name}: Du darfst Tore vorbereiten, aber in der nächsten Runde nicht selbst abschließen.', why:'Lenkt Dominanz in Vorlagen und Zusammenspiel um.'},
-    {id:'h_dom_contacts', active:true, type:'Handicap', target:'dominant', problem:'solo', strength:'stark', title:'Kontaktlimit', text:'{name}: Maximal 3 Ballkontakte, dann musst du abspielen.', why:'Begrenzt lange Dribblings und macht frühzeitige Orientierung notwendig.'},
-    {id:'h_dom_direct', active:true, type:'Handicap', target:'dominant', problem:'passes', strength:'mittel', title:'Direktspiel-Auftrag', text:'{name}: Du darfst den Ball nur annehmen und direkt oder nach einem Kontakt weiterspielen.', why:'Erhöht das Passspiel und stärkt die Mitspieler:innen.'},
-    {id:'p_low_safe', active:true, type:'Procap', target:'low', problem:'any', strength:'mittel', title:'3-Sekunden-Schutz', text:'{name}: Nach deiner Ballannahme hast du 3 Sekunden Schutz vor direktem Angriff.', why:'Gibt Zeit für Ballkontrolle und Entscheidung.'},
-    {id:'p_low_zone', active:true, type:'Procap', target:'low', problem:'pressure', strength:'stark', title:'Schutzraum', text:'{name}: Wenn du in der markierten Passzone stehst, darfst du nicht direkt angegriffen werden.', why:'Schafft eine sichere Anspielstation und senkt den Druck.'},
-    {id:'p_low_bonus', active:true, type:'Procap', target:'low', problem:'solo', strength:'leicht', title:'Einbindungsbonus', text:'{team}: Ein Tor zählt doppelt, wenn {name} am Angriff beteiligt war.', why:'Macht Einbindung zum gemeinsamen Teamziel.'},
+    // Handicaps für spielprägende/dominante Einzelpersonen
+    {id:'h_dom_assist_only', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', title:'Spielmacherrolle', text:'{name}: Du darfst Tore vorbereiten, aber in der nächsten Runde nicht selbst abschließen.', why:'Lenkt Dominanz in Vorlagen und Zusammenspiel um.'},
+    {id:'h_dom_3_contacts', active:true, type:'Handicap', target:'dominant', problem:'solo', strength:'stark', title:'Kontaktlimit', text:'{name}: Maximal 3 Ballkontakte, dann musst du abspielen.', why:'Begrenzt lange Dribblings und macht frühzeitige Orientierung notwendig.'},
+    {id:'h_dom_pass_before_shot', active:true, type:'Handicap', target:'dominant', problem:'solo', strength:'mittel', title:'Erst passen, dann schießen', text:'{name}: Vor einem Torschuss musst du mindestens einmal abspielen.', why:'Verhindert direkte Alleingänge und bindet Mitspieler:innen ein.'},
+    {id:'h_dom_double_pass_goal', active:true, type:'Handicap', target:'dominant', problem:'passes', strength:'leicht', title:'Doppelpass-Tor', text:'{name}: Du darfst Tore nur nach einem Doppelpass erzielen.', why:'Belässt Torgefahr, koppelt sie aber an Kooperation.'},
+    {id:'h_dom_no_two_shots', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'leicht', title:'Abschluss wechseln', text:'{name}: Du darfst nicht zweimal hintereinander den Torabschluss übernehmen.', why:'Verteilt Abschlüsse im Team.'},
+    {id:'h_dom_direct_play', active:true, type:'Handicap', target:'dominant', problem:'passes', strength:'stark', title:'Direktspiel-Auftrag', text:'{name}: Du darfst nur direkt oder nach einem Kontakt weiterspielen, nicht dribbeln.', why:'Erzwingt Orientierung vor der Ballannahme und stärkt das Passspiel.'},
+    {id:'h_dom_after_goal_assist', active:true, type:'Handicap', target:'dominant', problem:'solo', strength:'mittel', title:'Nach Tor: Vorlage', text:'{name}: Wenn du ein Tor erzielt hast, musst du beim nächsten Angriff zuerst eine Vorlage geben.', why:'Erfolg wird an Teamdienlichkeit gekoppelt.'},
+    {id:'h_dom_third_person', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', title:'Dritte Person einbeziehen', text:'{name}: Vor einem Torabschluss muss über dich mindestens eine dritte Person eingebunden werden.', why:'Verhindert Zweier-Dominanz und öffnet das Spiel.'},
+
+    // Procaps für wenig eingebundene Einzelpersonen
+    {id:'p_low_3_sec', active:true, type:'Procap', target:'low', problem:'any', strength:'mittel', title:'3-Sekunden-Schutz', text:'{name}: Nach deiner Ballannahme hast du 3 Sekunden Schutz vor direktem Angriff.', why:'Gibt Zeit für Ballkontrolle und Entscheidung.'},
+    {id:'p_low_goal_if_involved', active:true, type:'Procap', target:'low', problem:'solo', strength:'mittel', title:'Einbindungsbonus', text:'{team}: Ein Tor zählt doppelt, wenn {name} am Angriff beteiligt war.', why:'Macht Einbindung zum gemeinsamen Teamziel.'},
+    {id:'p_low_pass_bonus', active:true, type:'Procap', target:'low', problem:'passes', strength:'leicht', title:'Pass-Bonus', text:'Ein gelungener Pass von {name} zählt als Zusatzpunkt für {team}.', why:'Wertet aktive Beteiligung niedrigschwellig auf.'},
+    {id:'p_low_safe_zone', active:true, type:'Procap', target:'low', problem:'pressure', strength:'stark', title:'Schutzraum', text:'{name}: Wenn du in der markierten Passzone stehst, darfst du nicht direkt angegriffen werden.', why:'Schafft eine sichere Anspielstation und senkt Druck.'},
+    {id:'p_low_first_pass', active:true, type:'Procap', target:'low', problem:'pressure', strength:'mittel', title:'Sicherer erster Pass', text:'{name}: Nach Ballgewinn darfst du den ersten Pass ungestört spielen.', why:'Erleichtert den Einstieg in den Angriff.'},
+    {id:'p_low_goal_double', active:true, type:'Procap', target:'low', problem:'any', strength:'stark', title:'Mut-Tor', text:'Ein Tor von {name} zählt doppelt.', why:'Kann zurückhaltende SuS motivieren, Verantwortung zu übernehmen.'},
+    {id:'p_low_joker', active:true, type:'Procap', target:'low', problem:'pressure', strength:'stark', title:'Joker-Anspielstation', text:'{name} darf als Jokerperson jederzeit angespielt werden und beim ersten Kontakt nicht direkt attackiert werden.', why:'Schafft eine sichere, wiederkehrende Beteiligungsrolle.'},
+
+    // Teamregeln gegen Soloaktionen und zu wenig Passspiel
     {id:'t_three_players', active:true, type:'Teamregel', target:'team', problem:'solo', strength:'stark', title:'Drei beteiligt', text:'{team}: Ein Tor zählt nur, wenn vorher mindestens 3 verschiedene Teammitglieder beteiligt waren.', why:'Reduziert Soloaktionen und erzwingt Beteiligung.'},
     {id:'t_two_passes', active:true, type:'Teamregel', target:'team', problem:'passes', strength:'mittel', title:'Passpflicht', text:'{team}: Vor jedem Torabschluss müssen mindestens 2 Pässe gespielt werden.', why:'Macht Passspiel zum Spielziel.'},
-    {id:'t_pass_zone', active:true, type:'Procap', target:'team', problem:'pressure', strength:'mittel', title:'Procap-Zone', text:'In der markierten Passzone darf nicht direkt verteidigt werden.', why:'Schafft sichere Anspielstationen.'},
-    {id:'f_confirm', active:true, type:'Fairnessregel', target:'team', problem:'rules', strength:'mittel', title:'Gegner bestätigt', text:'Ein Punkt zählt nur, wenn das gegnerische Team die Zusatzregel bestätigt. Bei Streit: kein Punkt, direkt weiterspielen.', why:'Verringert Diskussionen und stärkt Regelverantwortung.'},
-    {id:'a_leading', active:true, type:'Ausgleichsregel', target:'leading', problem:'uneven', strength:'stark', title:'Führendes Team erschweren', text:'{team}: Ein Tor zählt nur nach 3 Pässen.', why:'Macht ein ungleiches Spiel spannender.'},
-    {id:'a_trailing', active:true, type:'Procap', target:'trailing', problem:'uneven', strength:'stark', title:'Zurückliegendes Team stärken', text:'{team}: Nach Ballgewinn habt ihr 3 Sekunden Schutz.', why:'Erleichtert Ballkontrolle und Anschlussaktionen.'},
-    {id:'c_ok', active:true, type:'Teamregel', target:'all', problem:'ok', strength:'leicht', title:'Nächste Challenge', text:'Tor zählt nur nach Seitenwechsel oder Pass aus der Außenzone.', why:'Wenn Beteiligung klappt, wird das Zusammenspiel taktisch anspruchsvoller.'}
+    {id:'t_no_solo_goal', active:true, type:'Teamregel', target:'team', problem:'solo', strength:'stark', title:'Kein Alleingang-Tor', text:'{team}: Tore nach Alleingang zählen nicht.', why:'Zwingt zur Kooperation vor dem Abschluss.'},
+    {id:'t_side_change', active:true, type:'Teamregel', target:'team', problem:'passes', strength:'mittel', title:'Seitenwechsel', text:'{team}: Vor dem Torabschluss muss der Ball einmal die Seite wechseln.', why:'Öffnet Räume und verhindert Balltrauben.'},
+    {id:'t_safety_pass', active:true, type:'Teamregel', target:'team', problem:'pressure', strength:'leicht', title:'Sicherheitspass', text:'{team}: Nach Ballgewinn muss zuerst ein Sicherheitspass gespielt werden.', why:'Beruhigt hektische Spielsituationen.'},
+    {id:'t_all_before_next_goal', active:true, type:'Teamregel', target:'team', problem:'solo', strength:'stark', title:'Alle vor dem Tor', text:'{team}: Ein Angriff ist erst abgeschlossen, wenn alle im Team einmal am Ball waren.', why:'Maximiert Beteiligung; nur für kurze Runden einsetzen.'},
+
+    // Procaps und Ausgleichsregeln für zurückliegende/schwächere Teams
+    {id:'a_leading_3_passes', active:true, type:'Ausgleichsregel', target:'leading', problem:'uneven', strength:'stark', title:'Führendes Team: 3 Pässe', text:'{team}: Ein Tor zählt nur nach mindestens 3 Pässen.', why:'Macht ein ungleiches Spiel gemeinsamer und spannender.'},
+    {id:'a_leading_no_direct_goal', active:true, type:'Ausgleichsregel', target:'leading', problem:'uneven', strength:'stark', title:'Keine direkten Tore', text:'{team}: Direkte Tore nach Ballgewinn zählen nicht.', why:'Nimmt Tempo aus Überlegenheit und fördert Aufbau.'},
+    {id:'a_trailing_start_ball', active:true, type:'Procap', target:'trailing', problem:'uneven', strength:'leicht', title:'Ballbesitz nach Gegentor', text:'{team}: Nach jedem Gegentor startet ihr mit Ballbesitz.', why:'Hält das zurückliegende Team im Spiel.'},
+    {id:'a_trailing_3_sec', active:true, type:'Procap', target:'trailing', problem:'uneven', strength:'mittel', title:'Schutz beim ersten Pass', text:'{team}: Nach Ballgewinn habt ihr 3 Sekunden Schutz für den ersten Pass.', why:'Erleichtert Ballkontrolle und Anschlussaktionen.'},
+    {id:'a_trailing_team_goal_double', active:true, type:'Procap', target:'trailing', problem:'uneven', strength:'mittel', title:'Comeback-Teamtor', text:'{team}: Euer nächstes Tor zählt doppelt, wenn 3 verschiedene Personen beteiligt waren.', why:'Belohnt Zusammenspiel statt Einzelaktion.'},
+    {id:'a_trailing_joker_wall', active:true, type:'Procap', target:'trailing', problem:'uneven', strength:'stark', title:'Joker am Rand', text:'{team}: Ihr dürft eine Jokerperson am Spielfeldrand anspielen.', why:'Schafft eine zusätzliche sichere Passoption.'},
+
+    // Regeln bei Druck, Fairness und guter Beteiligung
+    {id:'t_pass_zone', active:true, type:'Procap', target:'team', problem:'pressure', strength:'mittel', title:'Passzone', text:'{team}: In der markierten Passzone darf nicht direkt verteidigt werden.', why:'Schafft sichere Anspielstationen.'},
+    {id:'f_confirm', active:true, type:'Fairnessregel', target:'team', problem:'rules', strength:'leicht', title:'Gegner bestätigt', text:'Ein Punkt zählt nur, wenn das gegnerische Team die Zusatzregel bestätigt. Bei Streit: kein Punkt, direkt weiterspielen.', why:'Verringert Diskussionen und stärkt Regelverantwortung.'},
+    {id:'f_rule_say_out_loud', active:true, type:'Fairnessregel', target:'team', problem:'rules', strength:'mittel', title:'Regel laut nennen', text:'Nach jedem Tor nennt das Team kurz die erfüllte Zusatzregel. Erst dann zählt der Punkt.', why:'Macht Regelkontrolle transparent.'},
+    {id:'f_fairness_coach', active:true, type:'Fairnessregel', target:'team', problem:'rules', strength:'mittel', title:'Fairness-Coach', text:'Ein Fairness-Coach entscheidet nur über die Zusatzregel, nicht über jedes Foul.', why:'Begrenzt Diskussionen und gibt Verantwortung ab.'},
+    {id:'c_ok_sides', active:true, type:'Teamregel', target:'all', problem:'ok', strength:'leicht', title:'Nächste Challenge: Seitenwechsel', text:'Tor zählt nur nach Seitenwechsel oder Pass aus der Außenzone.', why:'Wenn Beteiligung klappt, wird das Zusammenspiel taktisch anspruchsvoller.'},
+    {id:'c_ok_double_pass', active:true, type:'Teamregel', target:'all', problem:'ok', strength:'leicht', title:'Nächste Challenge: Doppelpass', text:'Das nächste Tor zählt nur nach einem erkennbaren Doppelpass.', why:'Erhöht den kooperativen Anspruch bei funktionierendem Spiel.'}
   ];
 
   function cloneDefaultRules(){ return JSON.parse(JSON.stringify(DEFAULT_RULE_CARDS)).map(r=>({...r,id:r.id+'_'+makeId().slice(0,4)})); }
@@ -360,7 +390,7 @@
     return `<div class="field" id="field-${f.id}">
       <div class="field-head"><strong>${escapeHtml(f.name)} · Runde ${f.round||1}</strong><span class="timer" id="timer-${f.id}">${formatTime((timers[f.id]?.remaining ?? mins*60))}</span></div>
       <div style="padding:12px" class="grid">
-        <div class="score"><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','A',-1)">−</button> <span id="score-${f.id}">${f.scoreA||0} : ${f.scoreB||0}</span> <button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','B',1)">+</button></div>
+        <div class="score"><span id="score-${f.id}">${f.scoreA||0} : ${f.scoreB||0}</span></div>
         <div class="row" style="justify-content:center">
           <button class="primary" ${interactive?'':'disabled'} onclick="startTimer('${f.id}')">Start</button>
           <button class="ghost" ${interactive?'':'disabled'} onclick="pauseTimer('${f.id}')">Pause</button>
@@ -387,11 +417,16 @@
     </div>`;
   }
   function renderGameFields(){ const c=$('gameFieldsContainer'); if(!c) return; c.innerHTML = fields.length ? fields.map(f=>fieldCardHtml(f,true)).join('') : '<div class="muted">Noch keine Felder vorhanden.</div>'; }
+  function refreshJoinedField(){
+    if(!selectedJoinedFieldId || !$('joinedFieldContainer')) return;
+    const f=fields.find(x=>x.id===selectedJoinedFieldId);
+    if(f) $('joinedFieldContainer').innerHTML=fieldCardHtml(f,true,true);
+  }
   function formatTime(sec){ sec=Math.max(0,sec|0); return `${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`; }
-  window.changeScore=function(fid, side, delta){ const f=fields.find(x=>x.id===fid); if(!f) return; if(side==='A') f.scoreA=Math.max(0,(f.scoreA||0)+delta); else f.scoreB=Math.max(0,(f.scoreB||0)+delta); pushLiveField(f); renderGameFields(); renderFieldsSummary(); };
+  window.changeScore=function(fid, side, delta){ const f=fields.find(x=>x.id===fid); if(!f) return; if(side==='A') f.scoreA=Math.max(0,(f.scoreA||0)+delta); else f.scoreB=Math.max(0,(f.scoreB||0)+delta); pushLiveField(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); };
   window.startTimer=function(fid){ const mins=parseInt($('roundMinutes').value)||4; if(!timers[fid]) timers[fid]={remaining:mins*60,int:null}; if(timers[fid].int) return; timers[fid].int=setInterval(()=>{timers[fid].remaining--; const el=$('timer-'+fid); if(el) el.textContent=formatTime(timers[fid].remaining); if(timers[fid].remaining<=0){ pauseTimer(fid); finishRound(fid); }},1000); };
   window.pauseTimer=function(fid){ if(timers[fid]?.int){ clearInterval(timers[fid].int); timers[fid].int=null; } };
-  window.resetFieldRound=function(fid){ pauseTimer(fid); const mins=parseInt($('roundMinutes').value)||4; timers[fid]={remaining:mins*60,int:null}; const f=fields.find(x=>x.id===fid); if(f){f.scoreA=0;f.scoreB=0;f.recommendations=[];f.lastObservation=null; pushLiveField(f);} renderGameFields(); renderFieldsSummary(); };
+  window.resetFieldRound=function(fid){ pauseTimer(fid); const mins=parseInt($('roundMinutes').value)||4; timers[fid]={remaining:mins*60,int:null}; const f=fields.find(x=>x.id===fid); if(f){f.scoreA=0;f.scoreB=0;f.recommendations=[];f.lastObservation=null; pushLiveField(f);} renderGameFields(); renderFieldsSummary(); refreshJoinedField(); };
 
   window.finishRound=function(fid){
     pauseTimer(fid); const f=fields.find(x=>x.id===fid); if(!f) return;
@@ -401,7 +436,7 @@
     };
     f.lastObservation=obs; f.recommendations=makeRecommendations(f,obs); f.round=(f.round||1)+1; f.scoreA=0; f.scoreB=0;
     const mins=parseInt($('roundMinutes').value)||4; timers[fid]={remaining:mins*60,int:null};
-    pushLiveField(f); renderGameFields(); renderFieldsSummary(); notify('Runde ausgewertet. Regelkarte testen!');
+    pushLiveField(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); notify('Runde ausgewertet. Regelkarte testen!');
   };
   function studentName(id){ return students.find(s=>s.id===id)?.name || teams.flatMap(t=>t.students).find(s=>s.id===id)?.name || 'Person'; }
   function applyTemplate(txt, ctx){
@@ -464,7 +499,7 @@
     if(!ruleCards?.length) ruleCards=cloneDefaultRules();
     c.innerHTML = ruleCards.map(r=>`<div class="rule-card ${r.active===false?'inactive':''}">
       <div class="row" style="justify-content:space-between">
-        <div><span class="badge ${r.type==='Procap'?'procap':r.type==='Handicap'?'handicap':'team'}">${escapeHtml(r.type)}</span> <strong>${escapeHtml(r.title||'Ohne Titel')}</strong></div>
+        <label class="row" style="gap:8px"><input type="checkbox" ${r.active!==false?'checked':''} onchange="toggleRuleActive('${r.id}', this.checked)"><span class="badge ${r.type==='Procap'?'procap':r.type==='Handicap'?'handicap':'team'}">${escapeHtml(r.type)}</span> <strong>${escapeHtml(r.title||'Ohne Titel')}</strong></label>
         <div class="row"><button class="small" onclick="editRuleCard('${r.id}')">Bearbeiten</button><button class="small red" onclick="deleteRuleCard('${r.id}')">Löschen</button></div>
       </div>
       <div class="muted" style="margin:4px 0">Ziel: ${escapeHtml(ruleTargetLabel(r.target))} · Problem: ${escapeHtml(problemLabel(r.problem))} · Wirkung: ${escapeHtml(r.strength||'mittel')} · ${r.active===false?'inaktiv':'aktiv'}</div>
@@ -474,6 +509,10 @@
   }
   function ruleTargetLabel(v){ return ({dominant:'spielprägende Person', low:'wenig eingebundene Person', team:'Team/allgemeines Problem', leading:'führendes Team', trailing:'zurückliegendes Team', all:'immer möglich'}[v]||v||''); }
   function problemLabel(v){ return ({any:'egal', solo:'Soloaktionen', passes:'Passspiel', pressure:'Druck', uneven:'unausgeglichen', rules:'Regelstreit', ok:'alle beteiligt'}[v]||v||''); }
+  window.toggleRuleActive=function(id, checked){
+    const r=ruleCards.find(x=>x.id===id); if(!r) return;
+    r.active=checked; localStorage.setItem('fbph_rule_cards', JSON.stringify(ruleCards)); saveLocal(); renderRuleEditor(); pushLiveRules();
+  };
   window.newRuleCard=function(){
     $('ruleId').value=''; $('ruleActive').checked=true; $('ruleType').value='Handicap'; $('ruleStrength').value='mittel'; $('ruleTarget').value='dominant'; $('ruleProblem').value='any'; $('ruleTitle').value=''; $('ruleText').value=''; $('ruleWhy').value='';
   };
@@ -634,13 +673,13 @@
     if(liveUnsub) liveUnsub();
     liveUnsub = fb.onSnapshot(fb.doc(db,'teamsportSessions',code),(snap)=>{
       if(!snap.exists()) { notify('Live-Session wurde gelöscht.', true); currentRoom=''; updateModePill(); return; }
-      const d=snap.data(); students=d.students||students; teams=d.teams||teams; fields=d.fields||fields; ruleCards=d.ruleCards||ruleCards; currentClassName=d.className||currentClassName; renderAll(); updateModePill();
+      const d=snap.data(); students=d.students||students; teams=d.teams||teams; fields=d.fields||fields; ruleCards=d.ruleCards||ruleCards; currentClassName=d.className||currentClassName; renderAll(); refreshJoinedField(); updateModePill();
     });
   }
   async function pushLiveField(f){
     saveLocal();
     if(!currentRoom || !firebaseReady) return;
-    try{ await fb.updateDoc(fb.doc(db,'teamsportSessions',currentRoom), {fields, updatedAt:nowIso()}); }catch(e){ console.warn(e); }
+    try{ await fb.updateDoc(fb.doc(db,'teamsportSessions',currentRoom), {fields, updatedAt:nowIso()}); }catch(e){ console.warn(e); notify('Live-Speichern fehlgeschlagen: '+(e.code||e.message||e), true); }
   }
   async function pushLiveRules(){
     saveLocal();
@@ -665,7 +704,7 @@
     subscribeRoom(code); updateJoinFieldSelect(); updateModePill(); $('joinInfo').textContent=`Beigetreten: ${code}. Wähle dein Kleinfeld.`; notify('Live-Session beigetreten.');
   };
   function updateJoinFieldSelect(){ $('joinFieldSelect').innerHTML=fields.map(f=>`<option value="${f.id}">${escapeHtml(f.name)}: ${escapeHtml(getTeam(f.teamA)?.name||'A')} vs. ${escapeHtml(getTeam(f.teamB)?.name||'B')}</option>`).join(''); }
-  window.openJoinedField=function(){ const id=$('joinFieldSelect').value; const f=fields.find(x=>x.id===id); if(!f) return; $('joinedFieldContainer').innerHTML=fieldCardHtml(f,true,true); };
+  window.openJoinedField=function(){ const id=$('joinFieldSelect').value; const f=fields.find(x=>x.id===id); if(!f) return; selectedJoinedFieldId=id; $('joinedFieldContainer').innerHTML=fieldCardHtml(f,true,true); };
 
   // ---------------- HELPERS ----------------
   function escapeHtml(s){ return String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
