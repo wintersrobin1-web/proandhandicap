@@ -366,7 +366,7 @@
   function createFields(){
     const fc=parseInt($('fieldCount').value)||3; fields=[];
     for(let i=0;i<Math.min(fc, Math.floor(teams.length/2)); i++){
-      fields.push({id:makeId(), index:i, name:`Kleinfeld ${i+1}`, teamA:teams[i*2]?.id, teamB:teams[i*2+1]?.id, scoreA:0, scoreB:0, round:1, recommendations:[], lastObservation:null, updatedAt:nowIso()});
+      fields.push({id:makeId(), index:i, name:`Kleinfeld ${i+1}`, teamA:teams[i*2]?.id, teamB:teams[i*2+1]?.id, scoreA:0, scoreB:0, round:1, recommendations:[], lastObservation:null, timer:{remaining:getDefaultTimerSeconds(), running:false, startedAt:null}, updatedAt:nowIso()});
     }
   }
   function getTeam(id){ return teams.find(t=>t.id===id); }
@@ -388,7 +388,7 @@
   function fieldCardHtml(f, interactive=true, joined=false){
     const a=getTeam(f.teamA), b=getTeam(f.teamB); const mins=parseInt($('roundMinutes').value)||4;
     return `<div class="field" id="field-${f.id}">
-      <div class="field-head"><strong>${escapeHtml(f.name)} · Runde ${f.round||1}</strong><span class="timer" id="timer-${f.id}">${formatTime((timers[f.id]?.remaining ?? mins*60))}</span></div>
+      <div class="field-head"><strong>${escapeHtml(f.name)} · Runde ${f.round||1}</strong><span class="timer" data-timer-id="${f.id}">${formatTime(calcRemaining(f))}</span></div>
       <div style="padding:12px" class="grid">
         <div class="score"><span id="score-${f.id}">${f.scoreA||0} : ${f.scoreB||0}</span></div>
         <div class="row" style="justify-content:center">
@@ -422,21 +422,45 @@
     const f=fields.find(x=>x.id===selectedJoinedFieldId);
     if(f) $('joinedFieldContainer').innerHTML=fieldCardHtml(f,true,true);
   }
+  function getDefaultTimerSeconds(){ return (parseInt($('roundMinutes')?.value)||4)*60; }
+  function ensureFieldTimer(f){ if(!f.timer) f.timer={remaining:getDefaultTimerSeconds(), running:false, startedAt:null}; return f.timer; }
+  function calcRemaining(f){
+    const t=ensureFieldTimer(f); let rem=Number(t.remaining ?? getDefaultTimerSeconds());
+    if(t.running && t.startedAt){ rem -= Math.floor((Date.now()-new Date(t.startedAt).getTime())/1000); }
+    return Math.max(0, rem);
+  }
   function formatTime(sec){ sec=Math.max(0,sec|0); return `${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`; }
-  window.changeScore=function(fid, side, delta){ const f=fields.find(x=>x.id===fid); if(!f) return; if(side==='A') f.scoreA=Math.max(0,(f.scoreA||0)+delta); else f.scoreB=Math.max(0,(f.scoreB||0)+delta); pushLiveField(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); };
-  window.startTimer=function(fid){ const mins=parseInt($('roundMinutes').value)||4; if(!timers[fid]) timers[fid]={remaining:mins*60,int:null}; if(timers[fid].int) return; timers[fid].int=setInterval(()=>{timers[fid].remaining--; const el=$('timer-'+fid); if(el) el.textContent=formatTime(timers[fid].remaining); if(timers[fid].remaining<=0){ pauseTimer(fid); finishRound(fid); }},1000); };
-  window.pauseTimer=function(fid){ if(timers[fid]?.int){ clearInterval(timers[fid].int); timers[fid].int=null; } };
-  window.resetFieldRound=function(fid){ pauseTimer(fid); const mins=parseInt($('roundMinutes').value)||4; timers[fid]={remaining:mins*60,int:null}; const f=fields.find(x=>x.id===fid); if(f){f.scoreA=0;f.scoreB=0;f.recommendations=[];f.lastObservation=null; pushLiveField(f);} renderGameFields(); renderFieldsSummary(); refreshJoinedField(); };
+  function updateTimerDisplays(){
+    fields.forEach(f=>{
+      const rem=calcRemaining(f);
+      document.querySelectorAll(`[data-timer-id="${f.id}"]`).forEach(el=>{ el.textContent=formatTime(rem); });
+    });
+  }
+  setInterval(updateTimerDisplays, 500);
+
+  window.changeScore=function(fid, side, delta){ const f=fields.find(x=>x.id===fid); if(!f) return; if(side==='A') f.scoreA=Math.max(0,(f.scoreA||0)+delta); else f.scoreB=Math.max(0,(f.scoreB||0)+delta); pushLiveField(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); };
+  window.startTimer=function(fid){
+    const f=fields.find(x=>x.id===fid); if(!f) return;
+    const rem=calcRemaining(f) || getDefaultTimerSeconds();
+    f.timer={remaining:rem, running:true, startedAt:nowIso()};
+    pushLiveField(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays();
+  };
+  window.pauseTimer=function(fid){
+    const f=fields.find(x=>x.id===fid); if(!f) return;
+    f.timer={remaining:calcRemaining(f), running:false, startedAt:null};
+    pushLiveField(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays();
+  };
+  window.resetFieldRound=function(fid){ const f=fields.find(x=>x.id===fid); if(f){f.scoreA=0;f.scoreB=0;f.recommendations=[];f.lastObservation=null;f.timer={remaining:getDefaultTimerSeconds(),running:false,startedAt:null}; pushLiveField(f);} renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); };
 
   window.finishRound=function(fid){
-    pauseTimer(fid); const f=fields.find(x=>x.id===fid); if(!f) return;
+    const f=fields.find(x=>x.id===fid); if(!f) return; f.timer={remaining:calcRemaining(f), running:false, startedAt:null};
     const obs={
       domA:$('domA-'+fid)?.value||'', lowA:$('lowA-'+fid)?.value||'', domB:$('domB-'+fid)?.value||'', lowB:$('lowB-'+fid)?.value||'',
       problem:$('problem-'+fid)?.value||'solo', scoreA:f.scoreA||0, scoreB:f.scoreB||0, at:nowIso(), round:f.round||1
     };
     f.lastObservation=obs; f.recommendations=makeRecommendations(f,obs); f.round=(f.round||1)+1; f.scoreA=0; f.scoreB=0;
-    const mins=parseInt($('roundMinutes').value)||4; timers[fid]={remaining:mins*60,int:null};
-    pushLiveField(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); notify('Runde ausgewertet. Regelkarte testen!');
+    f.timer={remaining:getDefaultTimerSeconds(), running:false, startedAt:null};
+    pushLiveField(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); notify('Runde ausgewertet. Regelkarte testen!');
   };
   function studentName(id){ return students.find(s=>s.id===id)?.name || teams.flatMap(t=>t.students).find(s=>s.id===id)?.name || 'Person'; }
   function applyTemplate(txt, ctx){
@@ -673,7 +697,7 @@
     if(liveUnsub) liveUnsub();
     liveUnsub = fb.onSnapshot(fb.doc(db,'teamsportSessions',code),(snap)=>{
       if(!snap.exists()) { notify('Live-Session wurde gelöscht.', true); currentRoom=''; updateModePill(); return; }
-      const d=snap.data(); students=d.students||students; teams=d.teams||teams; fields=d.fields||fields; ruleCards=d.ruleCards||ruleCards; currentClassName=d.className||currentClassName; renderAll(); refreshJoinedField(); updateModePill();
+      const d=snap.data(); students=d.students||students; teams=d.teams||teams; fields=d.fields||fields; ruleCards=d.ruleCards||ruleCards; currentClassName=d.className||currentClassName; renderAll(); refreshJoinedField(); updateTimerDisplays(); updateModePill();
     });
   }
   async function pushLiveField(f){
@@ -692,7 +716,7 @@
     await fb.deleteDoc(fb.doc(db,'teamsportSessions',currentRoom)); currentRoom=''; updateModePill(); $('roomInfo').textContent='Session gelöscht.'; notify('Live-Session gelöscht.');
   };
   window.clearRoundData=async function(){
-    fields=fields.map(f=>({...f, scoreA:0, scoreB:0, round:1, recommendations:[], lastObservation:null}));
+    fields=fields.map(f=>({...f, scoreA:0, scoreB:0, round:1, recommendations:[], lastObservation:null, timer:{remaining:getDefaultTimerSeconds(), running:false, startedAt:null}}));
     if(currentRoom && firebaseReady) await fb.updateDoc(fb.doc(db,'teamsportSessions',currentRoom), {fields, updatedAt:nowIso()});
     renderAll(); notify('Rundendaten gelöscht. Teams bleiben erhalten.');
   };
