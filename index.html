@@ -260,7 +260,7 @@
 
   const DEFAULT_RULE_CARDS = [
     // Handicaps für spielprägende/oft beteiligte Einzelpersonen
-    {id:'h_dom_assist_only', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', title:'Nur Vorlagen', text:'{name}: Tore vorbereiten ja – selbst abschließen erst wieder nach einer Vorlage.', why:'Starkes Handicap für klare Überlegenheit; bei knappen Spielen werden mildere Regeln bevorzugt.'},
+    {id:'h_dom_assist_only', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', title:'Nur vorbereiten', text:'{name}: Du darfst selbst keine Tore erzielen, sondern nur vorbereiten.', why:'Lenkt häufig beteiligte Spieler:innen in Vorlagen und bindet andere stärker ein.'},
     {id:'h_dom_3_contacts', active:true, type:'Handicap', target:'dominant', problem:'solo', strength:'stark', title:'Kontaktlimit', text:'{name}: Maximal 3 Ballkontakte, dann musst du abspielen.', why:'Begrenzt lange Dribblings und macht frühzeitige Orientierung notwendig.'},
     {id:'h_dom_pass_before_shot', active:true, type:'Handicap', target:'dominant', problem:'solo', strength:'mittel', title:'Erst passen, dann schießen', text:'{name}: Vor einem Torschuss musst du mindestens einmal abspielen.', why:'Verhindert direkte Alleingänge und bindet Mitspieler:innen ein.'},
     {id:'h_dom_double_pass_goal', active:true, type:'Handicap', target:'dominant', problem:'passes', strength:'leicht', title:'Doppelpass-Tor', text:'{name}: Du darfst Tore nur nach einem Doppelpass erzielen.', why:'Belässt Torgefahr, koppelt sie aber an Kooperation.'},
@@ -303,7 +303,7 @@
     {id:'c_ok_double_pass', active:true, type:'Teamregel', target:'all', problem:'ok', strength:'leicht', title:'Nächste Challenge: Doppelpass', text:'Das nächste Tor zählt nur nach einem erkennbaren Doppelpass.', why:'Erhöht den kooperativen Anspruch bei funktionierendem Spiel.'}
     ,
     // Floorball/Unihockey-spezifisch
-    {id:'fb_dom_schiebepass', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['floorball'], title:'Schiebepass-Spielmacher:in', text:'{name}: Du darfst in der nächsten Runde nur kontrollierte Schiebepässe/Vorlagen spielen und nicht selbst aus dem Dribbling abschließen.', why:'Passt zu Floorball: Dominanz wird in sichere Vorlagen und Teamspiel umgelenkt.'},
+    {id:'fb_dom_schiebepass', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['floorball'], title:'Schiebepass-Spielmacher:in', text:'{name}: Du darfst selbst keine Tore erzielen, sondern nur vorbereiten.', why:'Passt zu Floorball: Dominanz wird in sichere Vorlagen und Teamspiel umgelenkt.'},
     {id:'fb_dom_no_dribble_lane', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', sports:['floorball'], title:'Kein Laufweg-Solo', text:'{name}: Du darfst den Ball nicht durch das ganze Feld führen – nach spätestens 3 Kontakten muss ein Pass kommen.', why:'Begrenzt dominante Dribblings mit Schläger und fördert frühes Abspiel.'},
     {id:'fb_low_stick_ready', active:true, type:'Procap', target:'low', problem:'any', strength:'mittel', sports:['floorball'], title:'Sichere Annahme', text:'{name}: Wenn dein Schläger sichtbar spielbereit am Boden ist, darfst du beim ersten Kontakt 3 Sekunden nicht attackiert werden.', why:'Gibt weniger eingebundenen SuS Zeit für Ballannahme und Entscheidung.'},
     {id:'fb_team_banktor_pass', active:true, type:'Teamregel', target:'team', problem:'any', strength:'mittel', sports:['floorball'], title:'Banktor nur nach Pass', text:'{team}: Ein Tor zählt nur, wenn der letzte Ball vor dem Abschluss ein Pass war.', why:'Verhindert reine Einzelaktionen auf kleine Tore.'},
@@ -324,7 +324,7 @@
     {id:'bb_team_three_passes', active:true, type:'Teamregel', target:'team', problem:'any', strength:'mittel', sports:['basketball'], title:'Drei Pässe vor Korb', text:'{team}: Ein Korb zählt nur, wenn vorher mindestens 3 Pässe gespielt wurden.', why:'Verhindert Einzelaktionen und stärkt Teamangriff.'},
 
     // Handball-spezifisch
-    {id:'hb_dom_no_goal', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['handball'], title:'Vorlagenrolle', text:'{name}: Du darfst in der nächsten Runde keine Tore werfen, aber Torvorlagen geben.', why:'Handball bleibt dynamisch, dominante Abschlüsse werden aber umgelenkt.'},
+    {id:'hb_dom_no_goal', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['handball'], title:'Vorlagenrolle', text:'{name}: Du darfst selbst keine Tore erzielen, sondern nur vorbereiten.', why:'Handball bleibt dynamisch, dominante Abschlüsse werden aber umgelenkt.'},
     {id:'hb_dom_weak_hand_pass', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['handball'], title:'Schwächere Hand', text:'{name}: Du spielst Pässe in der nächsten Runde möglichst mit deiner schwächeren Hand.', why:'Sportartspezifische Erschwernis ohne zusätzlichen Körperkontakt.'},
     {id:'hb_low_free_throw', active:true, type:'Procap', target:'low', problem:'any', strength:'mittel', sports:['handball'], title:'Freier Aufbaupass', text:'{name}: Nach Ballannahme erhältst du 3 Sekunden Abstand für den nächsten Pass.', why:'Gibt weniger eingebundenen SuS Zeit im schnellen Wurfspiel.'},
     {id:'hb_team_wing_involve', active:true, type:'Teamregel', target:'team', problem:'any', strength:'mittel', sports:['handball'], title:'Breite nutzen', text:'{team}: Ein Tor zählt nur, wenn vorher ein Pass über die Außenposition oder breite Zone gespielt wurde.', why:'Öffnet Räume und verhindert Spiel durch die Mitte.'},
@@ -666,8 +666,11 @@
     const maxVal=maxStrength ? strengthScore(maxStrength) : null;
     const candidates=(ruleCards||[]).filter(r=>r.active!==false && r.target===target && !exclude.includes(r.id) && (ruleSports(r).includes('general') || ruleSports(r).includes(currentSport) || currentSport==='all') && (!avoidNoGoal || !isNoGoalRule(r)) && (!maxVal || strengthScore(r.strength)<=maxVal)); 
     if(!candidates.length) return null;
-    candidates.sort((a,b)=>Math.abs(strengthScore(a.strength)-desiredVal)-Math.abs(strengthScore(b.strength)-desiredVal));
-    return candidates[0];
+    // Innerhalb sinnvoller Karten wird bewusst zufällig gewählt, damit nicht jede Runde dieselbe Karte erscheint.
+    const scored=candidates.map(r=>({r, d:Math.abs(strengthScore(r.strength)-desiredVal)}));
+    const min=Math.min(...scored.map(x=>x.d));
+    const pool=scored.filter(x=>x.d<=min+1).map(x=>x.r);
+    return pool[Math.floor(Math.random()*pool.length)];
   }
   function addRuleRecommendation(rec, rule, ctx){
     if(!rule) return false;
@@ -709,13 +712,14 @@
 
       // 1) Führendes Team bremsen: bei mehreren häufig beteiligten Personen nie beide aus der Torgefahr nehmen.
       // Bei 3:1 / 1:3 reicht eine milde, spieloffene Regel. Stärkere No-Goal-/Nur-Vorlagen-Regeln nur maximal für eine Person und nur bei klarerem Vorsprung.
-      if(leadDom.length && Math.abs(diff)>=3){
-        addPick('dominant', namesCtx(leadDom.slice(0,1), {team:leadTeam, otherTeam:trailTeam}), intensity);
+      if(leadDom.length && Math.abs(diff)>=2){
+        // Auch bei moderatem Vorsprung kann eine starke Person eine Einbindungs-Aufgabe bekommen.
+        // Aber: nie zwei Personen desselben Teams gleichzeitig komplett aus der Abschlussrolle nehmen.
+        const desiredForDom = Math.abs(diff)>=3 ? intensity : 'mittel';
+        addPick('dominant', namesCtx(leadDom.slice(0,1), {team:leadTeam, otherTeam:trailTeam}), desiredForDom, {maxStrength: Math.abs(diff)===2 ? 'mittel' : null});
         if(leadDom.length>1 && rec.length<3){
-          addPick('leading', {team:leadTeam, otherTeam:trailTeam}, 'mittel') || addPick('dominant', namesCtx(leadDom.slice(1,2), {team:leadTeam, otherTeam:trailTeam}), 'leicht', {avoidNoGoal:true, maxStrength:'mittel'});
+          addPick('leading', {team:leadTeam, otherTeam:trailTeam}, 'leicht') || addPick('dominant', namesCtx(leadDom.slice(1,2), {team:leadTeam, otherTeam:trailTeam}), 'leicht', {avoidNoGoal:true, maxStrength:'mittel'});
         }
-      } else if(leadDom.length && Math.abs(diff)===2){
-        addPick('leading', {team:leadTeam, otherTeam:trailTeam}, 'leicht') || addPick('dominant', namesCtx(leadDom.slice(0,1), {team:leadTeam, otherTeam:trailTeam}), 'leicht', {avoidNoGoal:true, maxStrength:'leicht'});
       } else {
         addPick('leading', {team:leadTeam, otherTeam:trailTeam}, intensity);
       }
