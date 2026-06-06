@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Teamsport Pro- und Handicap Generator – Offline & Live v16</title>
+  <title>Teamsport Pro- und Handicap Generator – Offline & Live v19</title>
   <style>
     :root{
       --green:#16a34a; --green-dark:#15803d; --green-soft:#ecfdf5;
@@ -641,49 +641,73 @@
     rec.push({type:`${rule.type} · ${rule.title || rule.strength}`, text:applyTemplate(rule.text, ctx), why:applyTemplate(rule.why, ctx), cardId:rule.id, strength:rule.strength});
     return true;
   }
+  function compactNames(ids){
+    const names=[...new Set((ids||[]).filter(Boolean))].map(studentName).filter(Boolean);
+    if(names.length===0) return '';
+    if(names.length===1) return names[0];
+    if(names.length===2) return names[0]+' und '+names[1];
+    return names.slice(0,-1).join(', ')+' und '+names[names.length-1];
+  }
   function makeRecommendations(f,obs){
     const rec=[]; const used=[]; const diff=(obs.scoreA||0)-(obs.scoreB||0);
-    const lowA=obsArray(obs,'lowA'), lowB=obsArray(obs,'lowB'), domA=obsArray(obs,'domA'), domB=obsArray(obs,'domB');
+    const lowA=obsArray(obs,'lowA').filter(Boolean), lowB=obsArray(obs,'lowB').filter(Boolean), domA=obsArray(obs,'domA').filter(Boolean), domB=obsArray(obs,'domB').filter(Boolean);
     const hasLow=[...lowA,...lowB].some(Boolean), hasDom=[...domA,...domB].some(Boolean);
     const intensity=Math.abs(diff)>=3 ? 'stark' : (Math.abs(diff)>=2 ? 'mittel' : 'leicht');
     const teamA=getTeam(f.teamA)?.name||'Team A', teamB=getTeam(f.teamB)?.name||'Team B';
     const addPick=(target, ctx, desired=intensity)=>{ const r=pickRule({target, desired, exclude:used}); if(r){ used.push(r.id); return addRuleRecommendation(rec,r,ctx); } return false; };
+    const isUneven=Math.abs(diff)>=2;
+    const leadingSide=diff>0?'A':(diff<0?'B':null);
+    const trailingSide=diff>0?'B':(diff<0?'A':null);
 
-    // 1) Personenbezogene Einträge haben Priorität: viel Beteiligung = Handicap, wenig Beteiligung = Procap.
-    [...new Set([...domA.filter(Boolean).map(id=>({id,team:teamA,otherTeam:teamB})), ...domB.filter(Boolean).map(id=>({id,team:teamB,otherTeam:teamA}))].map(JSON.stringify))].map(JSON.parse).forEach(x=>{
-      addPick('dominant', {name:studentName(x.id), team:x.team, otherTeam:x.otherTeam}, hasLow?'mittel':'leicht');
-    });
-    [...new Set([...lowA.filter(Boolean).map(id=>({id,team:teamA,otherTeam:teamB})), ...lowB.filter(Boolean).map(id=>({id,team:teamB,otherTeam:teamA}))].map(JSON.stringify))].map(JSON.parse).forEach(x=>{
-      addPick('low', {name:studentName(x.id), team:x.team, otherTeam:x.otherTeam}, hasDom?'mittel':'stark');
-    });
+    // Grundsatz für schnelle Runden: maximal wenige, klare Karten.
+    // Verlierende Teams erhalten keine zusätzlichen Handicaps, sondern eher Procaps/Einbindungsboni.
 
-    // 2) Deutlicher Spielstand erzeugt automatisch Ausgleichsregeln.
-    if(Math.abs(diff)>=2){
-      if(diff>0){
-        addPick('leading',{team:teamA,otherTeam:teamB}, intensity);
-        addPick('trailing',{team:teamB,otherTeam:teamA}, intensity);
+    if(isUneven){
+      const leadTeam=leadingSide==='A'?teamA:teamB, trailTeam=trailingSide==='A'?teamA:teamB;
+      const leadDom=leadingSide==='A'?domA:domB;
+      const trailLow=trailingSide==='A'?lowA:lowB;
+      const trailDom=trailingSide==='A'?domA:domB;
+      const leadLow=leadingSide==='A'?lowA:lowB;
+
+      // 1) Führendes Team bremsen: Wenn eine oft beteiligte Person eingetragen ist, personenbezogen; sonst Team-Handicap.
+      if(leadDom.length){
+        addPick('dominant', {name:compactNames(leadDom), team:leadTeam, otherTeam:trailTeam}, intensity);
       } else {
-        addPick('leading',{team:teamB,otherTeam:teamA}, intensity);
-        addPick('trailing',{team:teamA,otherTeam:teamB}, intensity);
+        addPick('leading', {team:leadTeam, otherTeam:trailTeam}, intensity);
       }
+
+      // 2) Zurückliegendes Team stärken: Wenn wenig eingebundene Person(en) eingetragen sind, personenbezogener Procap; sonst Team-Procap.
+      if(trailLow.length){
+        addPick('low', {name:compactNames(trailLow), team:trailTeam, otherTeam:leadTeam}, intensity);
+      } else {
+        addPick('trailing', {team:trailTeam, otherTeam:leadTeam}, intensity);
+      }
+
+      // 3) Falls im führenden Team jemand wenig eingebunden war, keine zusätzliche Unterstützung, sondern nur eine kurze Einbindungs-Teamregel.
+      // Dadurch bleibt die Auswertung kompakt und die Verliererseite wird nicht zusätzlich benachteiligt.
+      if(rec.length<3 && leadLow.length){
+        const r=(ruleCards||[]).find(x=>x.active!==false && x.target==='team' && (ruleSports(x).includes('general') || ruleSports(x).includes(currentSport) || currentSport==='all'));
+        if(r && !used.includes(r.id)){ used.push(r.id); addRuleRecommendation(rec,r,{team:leadTeam, otherTeam:trailTeam, name:compactNames(leadLow)}); }
+      }
+      return rec.slice(0,3);
     }
 
-    // 3) Wenn keine Person als wenig beteiligt eingetragen ist und kein deutlicher Rückstand besteht, kann die App eine allgemeine Zusatzchallenge geben.
-    if(!hasLow && !hasDom && Math.abs(diff)<2){
-      addPick('all',{team:'Beide Teams'},'leicht');
-    }
+    // Knapper Spielstand: Beteiligung ausgleichen, aber nur 1–3 Karten.
+    if(domA.length){ addPick('dominant', {name:compactNames(domA), team:teamA, otherTeam:teamB}, lowA.length||lowB.length?'mittel':'leicht'); }
+    if(domB.length && rec.length<2){ addPick('dominant', {name:compactNames(domB), team:teamB, otherTeam:teamA}, lowA.length||lowB.length?'mittel':'leicht'); }
 
-    // 4) Wenn Beteiligung auffällig war, aber noch keine Teamregel entstanden ist, ergänzen wir eine einfache Teamregel.
-    if(rec.length<2 && (hasLow || hasDom)) addPick('team',{team:'Beide Teams', otherTeam:'Gegnerteam'}, hasLow?'mittel':'leicht');
+    if(lowA.length && rec.length<3){ addPick('low', {name:compactNames(lowA), team:teamA, otherTeam:teamB}, hasDom?'mittel':'stark'); }
+    if(lowB.length && rec.length<3){ addPick('low', {name:compactNames(lowB), team:teamB, otherTeam:teamA}, hasDom?'mittel':'stark'); }
 
-    if(rec.length===0) addPick('team',{team:'Beide Teams'},'mittel');
-    if(rec.length===0) rec.push({type:'Teamregel · Standard', text:'Ein Tor zählt nur, wenn mindestens 3 verschiedene Teammitglieder beteiligt waren.', why:'Standardregel für mehr Miteinander.', strength:'mittel'});
-    return rec.slice(0,6);
+    // Wenn keine auffälligen Personen eingetragen sind: leichte gemeinsame Challenge.
+    if(rec.length===0){ addPick('all',{team:'Beide Teams'},'leicht') || addPick('team',{team:'Beide Teams'},'mittel'); }
+    if(rec.length===0) rec.push({type:'Teamregel · Kurz', text:'Ein Tor zählt nur, wenn mindestens 3 verschiedene Teammitglieder beteiligt waren.', why:'Mehr Beteiligung im Team.', strength:'mittel'});
+    return rec.slice(0,3);
   }
   
   function recommendationsHtml(f){
     if(!f.recommendations?.length) return '<div class="recommend"><strong>Noch keine Regelkarte</strong><span class="muted">Nach der Runde auswerten.</span></div>';
-    return f.recommendations.map(r=>`<div class="recommend ${r.type.includes('Procap')?'good':(r.type.includes('Handicap')||r.type.includes('Ausgleich'))?'warn':r.type.includes('Fairness')?'danger':''}"><strong>${escapeHtml(r.type)}</strong><div>${escapeHtml(r.text)}</div><div class="muted">${escapeHtml(r.why)}</div></div>`).join('');
+    return f.recommendations.map(r=>`<div class="recommend ${r.type.includes('Procap')?'good':(r.type.includes('Handicap')||r.type.includes('Ausgleich'))?'warn':r.type.includes('Fairness')?'danger':''}"><strong>${escapeHtml(r.type)}</strong><div>${escapeHtml(r.text)}</div></div>`).join('');
   }
 
 
