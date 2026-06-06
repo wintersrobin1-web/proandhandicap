@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Teamsport Pro- und Handicap Generator – Offline & Live v14</title>
+  <title>Teamsport Pro- und Handicap Generator – Offline & Live v15</title>
   <style>
     :root{
       --green:#16a34a; --green-dark:#15803d; --green-soft:#ecfdf5;
@@ -181,7 +181,9 @@
     <aside class="grid">
       <div class="card">
         <h2>Pro-/Handicap bearbeiten</h2>
-        <div class="notice">Regelkarten anpassen, neu erstellen oder deaktivieren. Die App wählt anschließend anhand von Spielstand und Beteiligung passende Karten aus. In Regeltexten kannst du die Platzhalter {name} und {team} verwenden.</div>
+        <label>Sportart-Profil<br><select id="sportProfile" style="width:100%" onchange="setSportProfile(this.value)"><option value="general">Allgemein / Teamsport</option><option value="floorball">Floorball / Unihockey</option><option value="football">Fußball</option><option value="basketball">Basketball</option><option value="handball">Handball</option><option value="ultimate">Ultimate / Frisbee</option></select></label>
+        <div class="row" style="margin-top:8px"><button class="blue" onclick="applySportPreset()">Geeignete Karten für Sportart aktivieren</button><button class="ghost" onclick="activateAllRules()">Alle Karten aktivieren</button></div>
+        <div class="notice" style="margin-top:10px">Regelkarten anpassen, neu erstellen oder deaktivieren. Die App wählt anschließend anhand von Spielstand, Beteiligung und aktiviertem Kartenpool passende Karten aus. In Regeltexten kannst du die Platzhalter {name}, {team} und {otherTeam} verwenden.</div>
         <h3>Neue / ausgewählte Karte</h3>
         <input type="hidden" id="ruleId" />
         <label>Aktiv <input type="checkbox" id="ruleActive" checked></label>
@@ -216,6 +218,7 @@
   let fields = [];
   let ruleCards = [];
   let currentClassName = '';
+  let currentSport = localStorage.getItem('fbph_current_sport') || 'general';
   let timers = {};
   const localPendingFields = {}; // verhindert, dass ein alter Live-Snapshot einen gerade gedrückten Timer-Button überschreibt
   let firebaseReady = false;
@@ -278,15 +281,53 @@
     {id:'f_fairness_coach', active:true, type:'Fairnessregel', target:'team', problem:'rules', strength:'mittel', title:'Fairness-Coach', text:'Ein Fairness-Coach entscheidet nur über die Zusatzregel, nicht über jedes Foul.', why:'Begrenzt Diskussionen und gibt Verantwortung ab.'},
     {id:'c_ok_sides', active:true, type:'Teamregel', target:'all', problem:'ok', strength:'leicht', title:'Nächste Challenge: Seitenwechsel', text:'Tor zählt nur nach Seitenwechsel oder Pass aus der Außenzone.', why:'Wenn Beteiligung klappt, wird das Zusammenspiel taktisch anspruchsvoller.'},
     {id:'c_ok_double_pass', active:true, type:'Teamregel', target:'all', problem:'ok', strength:'leicht', title:'Nächste Challenge: Doppelpass', text:'Das nächste Tor zählt nur nach einem erkennbaren Doppelpass.', why:'Erhöht den kooperativen Anspruch bei funktionierendem Spiel.'}
+    ,
+    // Floorball/Unihockey-spezifisch
+    {id:'fb_dom_flachpass', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['floorball'], title:'Flachpass-Spielmacher:in', text:'{name}: Du darfst in der nächsten Runde nur flache Pässe spielen und erst nach einer Vorlage abschließen.', why:'Passt zu Floorball: sichere flache Pässe und Teamspiel statt Alleingang.'},
+    {id:'fb_dom_no_dribble_lane', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', sports:['floorball'], title:'Kein Laufweg-Solo', text:'{name}: Du darfst den Ball nicht durch das ganze Feld führen – nach spätestens 3 Kontakten muss ein Pass kommen.', why:'Begrenzt dominante Dribblings mit Schläger und fördert frühes Abspiel.'},
+    {id:'fb_low_stick_ready', active:true, type:'Procap', target:'low', problem:'any', strength:'mittel', sports:['floorball'], title:'Sichere Annahme', text:'{name}: Wenn dein Schläger sichtbar spielbereit am Boden ist, darfst du beim ersten Kontakt 3 Sekunden nicht attackiert werden.', why:'Gibt weniger eingebundenen SuS Zeit für Ballannahme und Entscheidung.'},
+    {id:'fb_team_banktor_pass', active:true, type:'Teamregel', target:'team', problem:'any', strength:'mittel', sports:['floorball'], title:'Banktor nur nach Pass', text:'{team}: Ein Tor zählt nur, wenn der letzte Ball vor dem Abschluss ein Pass war.', why:'Verhindert reine Einzelaktionen auf kleine Tore.'},
+
+    // Fußball-spezifisch
+    {id:'fu_dom_weak_foot', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['football'], title:'Schwacher Fuß', text:'{name}: Tore zählen für dich nur mit deinem schwächeren Fuß.', why:'Bremst dominante Spieler:innen, ohne sie aus dem Spiel zu nehmen.'},
+    {id:'fu_dom_two_touch', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['football'], title:'Zwei-Kontakt-Regel', text:'{name}: Du darfst maximal zwei Ballkontakte haben, dann muss ein Pass kommen.', why:'Fördert Orientierung vor der Ballannahme und schnelles Zusammenspiel.'},
+    {id:'fu_low_goal_double', active:true, type:'Procap', target:'low', problem:'any', strength:'stark', sports:['football'], title:'Doppeltes Tor', text:'Ein Tor von {name} zählt doppelt.', why:'Motiviert wenig eingebundene SuS, aktiv den Abschluss zu suchen.'},
+    {id:'fu_team_no_direct_goal', active:true, type:'Teamregel', target:'team', problem:'any', strength:'mittel', sports:['football'], title:'Kein Direkt-Solo-Tor', text:'{team}: Ein Tor zählt nur, wenn vorher mindestens ein Pass gespielt wurde.', why:'Macht Fußball stärker zum Zusammenspiel.'},
+
+    // Basketball-spezifisch
+    {id:'bb_dom_weak_hand', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['basketball'], title:'Schwache Hand', text:'{name}: Du darfst in der nächsten Runde nur mit deiner schwächeren Hand dribbeln.', why:'Sportartspezifisches Handicap, das Dominanz reduziert und Technik variiert.'},
+    {id:'bb_dom_no_dribble', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', sports:['basketball'], title:'No-Dribble-Spielmacher:in', text:'{name}: Du darfst nicht dribbeln, sondern nur durch Passen und Freilaufen wirken.', why:'Lenkt starke SuS in Passspiel, Raumaufteilung und Assistrolle.'},
+    {id:'bb_low_free_pivot', active:true, type:'Procap', target:'low', problem:'any', strength:'mittel', sports:['basketball'], title:'Ruhige Entscheidung', text:'{name}: Nach Ballannahme darfst du einmal in Ruhe sternschrittartig sichern; direkte Balljagd ist 3 Sekunden tabu.', why:'Gibt Entscheidungssicherheit und reduziert Druck.'},
+    {id:'bb_team_three_passes', active:true, type:'Teamregel', target:'team', problem:'any', strength:'mittel', sports:['basketball'], title:'Drei Pässe vor Korb', text:'{team}: Ein Korb zählt nur, wenn vorher mindestens 3 Pässe gespielt wurden.', why:'Verhindert Einzelaktionen und stärkt Teamangriff.'},
+
+    // Handball-spezifisch
+    {id:'hb_dom_no_goal', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['handball'], title:'Vorlagenrolle', text:'{name}: Du darfst in der nächsten Runde keine Tore werfen, aber Torvorlagen geben.', why:'Handball bleibt dynamisch, dominante Abschlüsse werden aber umgelenkt.'},
+    {id:'hb_dom_weak_hand_pass', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['handball'], title:'Schwächere Hand', text:'{name}: Du spielst Pässe in der nächsten Runde möglichst mit deiner schwächeren Hand.', why:'Sportartspezifische Erschwernis ohne zusätzlichen Körperkontakt.'},
+    {id:'hb_low_free_throw', active:true, type:'Procap', target:'low', problem:'any', strength:'mittel', sports:['handball'], title:'Freier Aufbaupass', text:'{name}: Nach Ballannahme erhältst du 3 Sekunden Abstand für den nächsten Pass.', why:'Gibt weniger eingebundenen SuS Zeit im schnellen Wurfspiel.'},
+    {id:'hb_team_wing_involve', active:true, type:'Teamregel', target:'team', problem:'any', strength:'mittel', sports:['handball'], title:'Breite nutzen', text:'{team}: Ein Tor zählt nur, wenn vorher ein Pass über die Außenposition oder breite Zone gespielt wurde.', why:'Öffnet Räume und verhindert Spiel durch die Mitte.'},
+
+    // Ultimate/Frisbee-spezifisch
+    {id:'ul_dom_no_score', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['ultimate'], title:'Assistrolle', text:'{name}: Du darfst den Punkt nicht selbst fangen, aber den entscheidenden Pass vorbereiten.', why:'Lenkt dominante Läufer:innen in Spielaufbau und Übersicht.'},
+    {id:'ul_dom_backhand_only', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['ultimate'], title:'Wurfseite begrenzen', text:'{name}: Du darfst in der nächsten Runde nur Rückhandpässe spielen.', why:'Begrenzt starke Wurfoptionen und macht Freilaufen des Teams wichtiger.'},
+    {id:'ul_low_safe_catch', active:true, type:'Procap', target:'low', problem:'any', strength:'mittel', sports:['ultimate'], title:'Sicherer erster Pass', text:'{name}: Nach einem gefangenen Pass darfst du 3 Sekunden ungestört den nächsten Pass vorbereiten.', why:'Erleichtert Beteiligung im laufintensiven Spiel.'},
+    {id:'ul_team_all_touch', active:true, type:'Teamregel', target:'team', problem:'any', strength:'stark', sports:['ultimate'], title:'Alle einmal frei', text:'{team}: Ein Punkt zählt nur, wenn mindestens 3 verschiedene Personen die Scheibe berührt haben.', why:'Fördert Freilaufen und gleichmäßigere Beteiligung.'}
+
   ];
 
   function cloneDefaultRules(){ return JSON.parse(JSON.stringify(DEFAULT_RULE_CARDS)).map(r=>({...r,id:r.id+'_'+makeId().slice(0,4)})); }
+  function baseRuleId(id){ return String(id||'').replace(/_[a-z0-9]{4}$/,''); }
+  function defaultRuleByBase(id){ const base=baseRuleId(id); return DEFAULT_RULE_CARDS.find(r=>r.id===base); }
+  function ruleSports(rule){ return rule.sports || defaultRuleByBase(rule.id)?.sports || ['general']; }
+  function mergeMissingDefaultRules(){
+    const existing=new Set((ruleCards||[]).map(r=>baseRuleId(r.id)));
+    DEFAULT_RULE_CARDS.forEach(d=>{ if(!existing.has(d.id)) ruleCards.push({...JSON.parse(JSON.stringify(d)), id:d.id+'_'+makeId().slice(0,4)}); });
+  }
 
 
   const $ = (id) => document.getElementById(id);
-  const saveLocal = () => localStorage.setItem('fbph_state', JSON.stringify({students, teams, fields, ruleCards, currentClassName}));
+  const saveLocal = () => localStorage.setItem('fbph_state', JSON.stringify({students, teams, fields, ruleCards, currentClassName, currentSport}));
   const loadLocal = () => {
-    try { const s = JSON.parse(localStorage.getItem('fbph_state') || '{}'); students=s.students||[]; teams=s.teams||[]; fields=s.fields||[]; ruleCards=s.ruleCards||JSON.parse(localStorage.getItem('fbph_rule_cards')||'null')||cloneDefaultRules(); currentClassName=s.currentClassName||''; } catch(e){}
+    try { const s = JSON.parse(localStorage.getItem('fbph_state') || '{}'); students=s.students||[]; teams=s.teams||[]; fields=s.fields||[]; ruleCards=s.ruleCards||JSON.parse(localStorage.getItem('fbph_rule_cards')||'null')||cloneDefaultRules(); currentClassName=s.currentClassName||''; currentSport=s.currentSport||localStorage.getItem('fbph_current_sport')||'general'; } catch(e){}
   };
 
   function makeId(){ return Math.random().toString(36).slice(2,10); }
@@ -389,7 +430,7 @@
     fields=[];
     for(let i=0;i<Math.min(fc, Math.floor(teams.length/2)); i++){
       const ta=teams[i*2]?.id, tb=teams[i*2+1]?.id;
-      fields.push({id:makeId(), index:i, name:`Kleinfeld ${i+1}`, teamA:ta, teamB:tb, onFieldSize:onField, rotationAfterGoal:((getTeam(ta)?.students?.length||0)>onField || (getTeam(tb)?.students?.length||0)>onField), rotationHint:'', rotationHintAtMs:null, scoreA:0, scoreB:0, round:1, recommendations:[], lastObservation:null, observationDraft:{domA:'',lowA:'',domB:'',lowB:''}, timer:{remaining:getDefaultTimerSeconds(), running:false, startedAt:null, startedAtMs:null, endsAtMs:null}, updatedAt:nowIso(), updatedAtMs:nowMs()});
+      fields.push({id:makeId(), index:i, name:`Kleinfeld ${i+1}`, teamA:ta, teamB:tb, onFieldSize:onField, rotationAfterGoal:((getTeam(ta)?.students?.length||0)>onField || (getTeam(tb)?.students?.length||0)>onField), rotationHint:'', rotationHintAtMs:null, scoreA:0, scoreB:0, round:1, recommendations:[], lastObservation:null, observationDraft:{domA:['',''],lowA:['',''],domB:['',''],lowB:['','']}, timer:{remaining:getDefaultTimerSeconds(), running:false, startedAt:null, startedAtMs:null, endsAtMs:null}, updatedAt:nowIso(), updatedAtMs:nowMs()});
     }
   }
   function getTeam(id){ return teams.find(t=>t.id===id); }
@@ -411,9 +452,16 @@
   function renderAll(){ renderStudents(); renderTeams(); renderFieldsSummary(); renderGameFields(); renderRuleEditor(); refreshClassSelect(); $('className').value=currentClassName; saveLocal(); }
 
   // ---------------- GAME UI ----------------
-  function teamOptions(teamId, selected=''){
+  function obsArray(d,key){ const v=d?.[key]; return Array.isArray(v) ? [v[0]||'', v[1]||''] : [v||'', '']; }
+  function teamOptions(teamId, selected='', exclude=[]){
     const t=getTeam(teamId); if(!t) return '<option value="">--</option>';
-    return '<option value="">-- auswählen --</option>'+t.students.map(s=>`<option value="${s.id}" ${String(selected)===String(s.id)?'selected':''}>${escapeHtml(s.name)}</option>`).join('');
+    const ex=new Set((exclude||[]).filter(Boolean).map(String));
+    return '<option value="">-- auswählen --</option>'+t.students.filter(s=>String(s.id)===String(selected)||!ex.has(String(s.id))).map(s=>`<option value="${s.id}" ${String(selected)===String(s.id)?'selected':''}>${escapeHtml(s.name)}</option>`).join('');
+  }
+  function obsSelects(fid, teamId, key, label){
+    const d=(fields.find(x=>x.id===fid)?.observationDraft)||{}; const arr=obsArray(d,key);
+    return `<label>${label} 1<br><select class="select-wide" id="${key}0-${fid}" onchange="updateObservation('${fid}','${key}',0,this.value)">${teamOptions(teamId,arr[0],[arr[1]])}</select></label><br><br>
+            <label>${label} 2<br><select class="select-wide" id="${key}1-${fid}" onchange="updateObservation('${fid}','${key}',1,this.value)">${teamOptions(teamId,arr[1],[arr[0]])}</select></label>`;
   }
   function fieldCardHtml(f, interactive=true, joined=false){
     const a=getTeam(f.teamA), b=getTeam(f.teamB); const mins=parseInt($('roundMinutes').value)||4;
@@ -431,13 +479,13 @@
         </div>
         <div class="two">
           <div class="side"><h4>${escapeHtml(a?.name||'Team A')}</h4>${teamRoleHint(a, f.onFieldSize || parseInt($('teamSize')?.value)||3)}
-            <label>spielprägend<br><select class="select-wide" id="domA-${f.id}" onchange="updateObservation('${f.id}','domA',this.value)">${teamOptions(f.teamA,d.domA)}</select></label><br><br>
-            <label>wenig eingebunden<br><select class="select-wide" id="lowA-${f.id}" onchange="updateObservation('${f.id}','lowA',this.value)">${teamOptions(f.teamA,d.lowA)}</select></label>
+            ${obsSelects(f.id,f.teamA,'domA','spielprägend')}<br><br>
+            ${obsSelects(f.id,f.teamA,'lowA','wenig eingebunden')}
             <div class="row" style="margin-top:8px"><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','A',1)">Tor +</button><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','A',-1)">Tor −</button></div>
           </div>
           <div class="side"><h4>${escapeHtml(b?.name||'Team B')}</h4>${teamRoleHint(b, f.onFieldSize || parseInt($('teamSize')?.value)||3)}
-            <label>spielprägend<br><select class="select-wide" id="domB-${f.id}" onchange="updateObservation('${f.id}','domB',this.value)">${teamOptions(f.teamB,d.domB)}</select></label><br><br>
-            <label>wenig eingebunden<br><select class="select-wide" id="lowB-${f.id}" onchange="updateObservation('${f.id}','lowB',this.value)">${teamOptions(f.teamB,d.lowB)}</select></label>
+            ${obsSelects(f.id,f.teamB,'domB','spielprägend')}<br><br>
+            ${obsSelects(f.id,f.teamB,'lowB','wenig eingebunden')}
             <div class="row" style="margin-top:8px"><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','B',1)">Tor +</button><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','B',-1)">Tor −</button></div>
           </div>
         </div>
@@ -494,7 +542,7 @@
 
   window.updateObservation=function(fid, key, value){
     const f=fields.find(x=>x.id===fid); if(!f) return;
-    if(!f.observationDraft) f.observationDraft={domA:'',lowA:'',domB:'',lowB:''};
+    if(!f.observationDraft) f.observationDraft={domA:['',''],lowA:['',''],domB:['',''],lowB:['','']};
     f.observationDraft[key]=value||'';
     markFieldChanged(f);
     // Nicht komplett neu rendern, damit die Bedienung stabil bleibt; andere Ansichten/Geräte erhalten den Live-Stand.
@@ -532,16 +580,16 @@
     renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays();
     pushLiveField(f);
   };
-  window.resetFieldRound=function(fid){ const f=fields.find(x=>x.id===fid); if(f){f.scoreA=0;f.scoreB=0;f.recommendations=[];f.lastObservation=null;f.observationDraft={domA:'',lowA:'',domB:'',lowB:''};f.timer={remaining:getDefaultTimerSeconds(),running:false,startedAt:null,startedAtMs:null,endsAtMs:null}; f.rotationHint=''; f.rotationHintAtMs=null; markFieldChanged(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); pushLiveField(f);} };
+  window.resetFieldRound=function(fid){ const f=fields.find(x=>x.id===fid); if(f){f.scoreA=0;f.scoreB=0;f.recommendations=[];f.lastObservation=null;f.observationDraft={domA:['',''],lowA:['',''],domB:['',''],lowB:['','']};f.timer={remaining:getDefaultTimerSeconds(),running:false,startedAt:null,startedAtMs:null,endsAtMs:null}; f.rotationHint=''; f.rotationHintAtMs=null; markFieldChanged(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); pushLiveField(f);} };
 
   window.finishRound=function(fid){
     const f=fields.find(x=>x.id===fid); if(!f) return; f.timer={remaining:calcRemaining(f), running:false, startedAt:null, startedAtMs:null, endsAtMs:null}; markFieldChanged(f);
     const draft=f.observationDraft||{};
     const obs={
-      domA:$('domA-'+fid)?.value||draft.domA||'', lowA:$('lowA-'+fid)?.value||draft.lowA||'', domB:$('domB-'+fid)?.value||draft.domB||'', lowB:$('lowB-'+fid)?.value||draft.lowB||'',
+      domA:[$('domA0-'+fid)?.value||obsArray(draft,'domA')[0]||'', $('domA1-'+fid)?.value||obsArray(draft,'domA')[1]||''], lowA:[$('lowA0-'+fid)?.value||obsArray(draft,'lowA')[0]||'', $('lowA1-'+fid)?.value||obsArray(draft,'lowA')[1]||''], domB:[$('domB0-'+fid)?.value||obsArray(draft,'domB')[0]||'', $('domB1-'+fid)?.value||obsArray(draft,'domB')[1]||''], lowB:[$('lowB0-'+fid)?.value||obsArray(draft,'lowB')[0]||'', $('lowB1-'+fid)?.value||obsArray(draft,'lowB')[1]||''],
       scoreA:f.scoreA||0, scoreB:f.scoreB||0, at:nowIso(), round:f.round||1
     };
-    f.lastObservation=obs; f.recommendations=makeRecommendations(f,obs); f.round=(f.round||1)+1; f.scoreA=0; f.scoreB=0; f.observationDraft={domA:'',lowA:'',domB:'',lowB:''};
+    f.lastObservation=obs; f.recommendations=makeRecommendations(f,obs); f.round=(f.round||1)+1; f.scoreA=0; f.scoreB=0; f.observationDraft={domA:['',''],lowA:['',''],domB:['',''],lowB:['','']};
     f.timer={remaining:getDefaultTimerSeconds(), running:false, startedAt:null, startedAtMs:null, endsAtMs:null};
     f.rotationHint=''; f.rotationHintAtMs=null;
     markFieldChanged(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); pushLiveField(f); notify('Runde ausgewertet. Regelkarte testen!');
@@ -553,7 +601,7 @@
   function strengthScore(str){ return {leicht:1, mittel:2, stark:3}[str] || 2; }
   function pickRule({target, desired='mittel', exclude=[]}){
     const desiredVal=strengthScore(desired);
-    const candidates=(ruleCards||[]).filter(r=>r.active!==false && r.target===target && !exclude.includes(r.id));
+    const candidates=(ruleCards||[]).filter(r=>r.active!==false && r.target===target && !exclude.includes(r.id) && (ruleSports(r).includes('general') || ruleSports(r).includes(currentSport) || currentSport==='all')); 
     if(!candidates.length) return null;
     candidates.sort((a,b)=>Math.abs(strengthScore(a.strength)-desiredVal)-Math.abs(strengthScore(b.strength)-desiredVal));
     return candidates[0];
@@ -565,16 +613,17 @@
   }
   function makeRecommendations(f,obs){
     const rec=[]; const used=[]; const diff=(obs.scoreA||0)-(obs.scoreB||0);
-    const hasLow=!!(obs.lowA||obs.lowB), hasDom=!!(obs.domA||obs.domB);
+    const lowA=obsArray(obs,'lowA'), lowB=obsArray(obs,'lowB'), domA=obsArray(obs,'domA'), domB=obsArray(obs,'domB');
+    const hasLow=[...lowA,...lowB].some(Boolean), hasDom=[...domA,...domB].some(Boolean);
     const intensity=Math.abs(diff)>=3 ? 'stark' : (Math.abs(diff)>=2 ? 'mittel' : 'leicht');
     const teamA=getTeam(f.teamA)?.name||'Team A', teamB=getTeam(f.teamB)?.name||'Team B';
     const addPick=(target, ctx, desired=intensity)=>{ const r=pickRule({target, desired, exclude:used}); if(r){ used.push(r.id); return addRuleRecommendation(rec,r,ctx); } return false; };
 
     // 1) Personenbezogene Einträge haben Priorität: viel Beteiligung = Handicap, wenig Beteiligung = Procap.
-    [{id:obs.domA, team:teamA, otherTeam:teamB}, {id:obs.domB, team:teamB, otherTeam:teamA}].filter(x=>x.id).forEach(x=>{
+    [...new Set([...domA.filter(Boolean).map(id=>({id,team:teamA,otherTeam:teamB})), ...domB.filter(Boolean).map(id=>({id,team:teamB,otherTeam:teamA}))].map(JSON.stringify))].map(JSON.parse).forEach(x=>{
       addPick('dominant', {name:studentName(x.id), team:x.team, otherTeam:x.otherTeam}, hasLow?'mittel':'leicht');
     });
-    [{id:obs.lowA, team:teamA, otherTeam:teamB}, {id:obs.lowB, team:teamB, otherTeam:teamA}].filter(x=>x.id).forEach(x=>{
+    [...new Set([...lowA.filter(Boolean).map(id=>({id,team:teamA,otherTeam:teamB})), ...lowB.filter(Boolean).map(id=>({id,team:teamB,otherTeam:teamA}))].map(JSON.stringify))].map(JSON.parse).forEach(x=>{
       addPick('low', {name:studentName(x.id), team:x.team, otherTeam:x.otherTeam}, hasDom?'mittel':'stark');
     });
 
@@ -599,7 +648,7 @@
 
     if(rec.length===0) addPick('team',{team:'Beide Teams'},'mittel');
     if(rec.length===0) rec.push({type:'Teamregel · Standard', text:'Ein Tor zählt nur, wenn mindestens 3 verschiedene Teammitglieder beteiligt waren.', why:'Standardregel für mehr Miteinander.', strength:'mittel'});
-    return rec.slice(0,4);
+    return rec.slice(0,6);
   }
   
   function recommendationsHtml(f){
@@ -611,19 +660,27 @@
   // ---------------- RULE CARD EDITOR ----------------
   function renderRuleEditor(){
     const c=$('rulesContainer'); if(!c) return;
-    if(!ruleCards?.length) ruleCards=cloneDefaultRules();
+    if(!ruleCards?.length) ruleCards=cloneDefaultRules(); if($('sportProfile')) $('sportProfile').value=currentSport;
     c.innerHTML = ruleCards.map(r=>`<div class="rule-card ${r.active===false?'inactive':''}">
       <div class="row" style="justify-content:space-between">
         <label class="row" style="gap:8px"><input type="checkbox" ${r.active!==false?'checked':''} onchange="toggleRuleActive('${r.id}', this.checked)"><span class="badge ${r.type==='Procap'?'procap':r.type==='Handicap'?'handicap':'team'}">${escapeHtml(r.type)}</span> <strong>${escapeHtml(r.title||'Ohne Titel')}</strong></label>
         <div class="row"><button class="small" onclick="editRuleCard('${r.id}')">Bearbeiten</button><button class="small red" onclick="deleteRuleCard('${r.id}')">Löschen</button></div>
       </div>
-      <div class="muted" style="margin:4px 0">Ziel: ${escapeHtml(ruleTargetLabel(r.target))} · Wirkung: ${escapeHtml(r.strength||'mittel')} · ${r.active===false?'inaktiv':'aktiv'}</div>
+      <div class="muted" style="margin:4px 0">Ziel: ${escapeHtml(ruleTargetLabel(r.target))} · Wirkung: ${escapeHtml(r.strength||'mittel')} · Sport: ${escapeHtml(ruleSports(r).map(sportLabel).join(', '))} · ${r.active===false?'inaktiv':'aktiv'}</div>
       <div>${escapeHtml(r.text)}</div>
       <div class="muted">${escapeHtml(r.why||'')}</div>
     </div>`).join('');
   }
   function ruleTargetLabel(v){ return ({dominant:'spielprägende Person', low:'wenig eingebundene Person', team:'Teamregel', leading:'führendes Team', trailing:'zurückliegendes Team', all:'Zusatzchallenge'}[v]||v||''); }
   function problemLabel(v){ return ({any:'egal', solo:'Soloaktionen', passes:'Passspiel', pressure:'Druck', uneven:'unausgeglichen', rules:'Regelstreit', ok:'alle beteiligt'}[v]||v||''); }
+  function sportLabel(v){ return ({general:'allgemein',floorball:'Floorball',football:'Fußball',basketball:'Basketball',handball:'Handball',ultimate:'Ultimate',all:'alle'}[v]||v); }
+  window.setSportProfile=function(v){ currentSport=v||'general'; localStorage.setItem('fbph_current_sport', currentSport); saveLocal(); renderRuleEditor(); notify('Sportart-Profil gesetzt. Aktive Karten bleiben unverändert.'); };
+  window.applySportPreset=function(){
+    const sport=$('sportProfile')?.value || currentSport || 'general'; currentSport=sport; localStorage.setItem('fbph_current_sport', currentSport);
+    ruleCards.forEach(r=>{ const sp=ruleSports(r); r.active = sp.includes('general') || sp.includes(sport) || !defaultRuleByBase(r.id); });
+    localStorage.setItem('fbph_rule_cards', JSON.stringify(ruleCards)); saveLocal(); renderRuleEditor(); pushLiveRules(); notify('Geeignete Karten für '+sportLabel(currentSport)+' aktiviert.');
+  };
+  window.activateAllRules=function(){ ruleCards.forEach(r=>r.active=true); localStorage.setItem('fbph_rule_cards', JSON.stringify(ruleCards)); saveLocal(); renderRuleEditor(); pushLiveRules(); notify('Alle Karten aktiviert.'); };
   window.toggleRuleActive=function(id, checked){
     const r=ruleCards.find(x=>x.id===id); if(!r) return;
     r.active=checked; localStorage.setItem('fbph_rule_cards', JSON.stringify(ruleCards)); saveLocal(); renderRuleEditor(); pushLiveRules();
@@ -832,7 +889,7 @@
     await fb.deleteDoc(fb.doc(db,'teamsportSessions',currentRoom)); currentRoom=''; updateModePill(); $('roomInfo').textContent='Session gelöscht.'; notify('Live-Session gelöscht.');
   };
   window.clearRoundData=async function(){
-    fields=fields.map(f=>({...f, scoreA:0, scoreB:0, round:1, recommendations:[], lastObservation:null, observationDraft:{domA:'',lowA:'',domB:'',lowB:''}, timer:{remaining:getDefaultTimerSeconds(), running:false, startedAt:null, startedAtMs:null, endsAtMs:null}, updatedAt:nowIso(), updatedAtMs:nowMs()}));
+    fields=fields.map(f=>({...f, scoreA:0, scoreB:0, round:1, recommendations:[], lastObservation:null, observationDraft:{domA:['',''],lowA:['',''],domB:['',''],lowB:['','']}, timer:{remaining:getDefaultTimerSeconds(), running:false, startedAt:null, startedAtMs:null, endsAtMs:null}, updatedAt:nowIso(), updatedAtMs:nowMs()}));
     if(currentRoom && firebaseReady) await fb.updateDoc(fb.doc(db,'teamsportSessions',currentRoom), {fields, updatedAt:nowIso()});
     renderAll(); notify('Rundendaten gelöscht. Teams bleiben erhalten.');
   };
@@ -864,7 +921,7 @@
   function escapeAttr(s){ return escapeHtml(s).replace(/`/g,'&#96;'); }
 
   // Init
-  loadLocal(); if(!ruleCards || !ruleCards.length) ruleCards=cloneDefaultRules(); refreshClassSelect(); $('firebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; $('joinFirebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; renderAll(); updateModePill(); updateJoinFieldSelect(); handleDeepLinkJoin();
+  loadLocal(); if(!ruleCards || !ruleCards.length) ruleCards=cloneDefaultRules(); mergeMissingDefaultRules(); refreshClassSelect(); $('firebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; $('joinFirebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; renderAll(); if($('sportProfile')) $('sportProfile').value=currentSport; updateModePill(); updateJoinFieldSelect(); handleDeepLinkJoin();
 
 </script>
 </body>
