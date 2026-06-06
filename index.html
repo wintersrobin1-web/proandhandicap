@@ -260,7 +260,7 @@
 
   const DEFAULT_RULE_CARDS = [
     // Handicaps für spielprägende/oft beteiligte Einzelpersonen
-    {id:'h_dom_assist_only', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', title:'Spielmacherrolle', text:'{name}: Du darfst Tore vorbereiten, aber in der nächsten Runde nicht selbst abschließen.', why:'Lenkt Dominanz in Vorlagen und Zusammenspiel um.'},
+    {id:'h_dom_assist_only', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', title:'Nur Vorlagen', text:'{name}: Tore vorbereiten ja – selbst abschließen erst wieder nach einer Vorlage.', why:'Starkes Handicap für klare Überlegenheit; bei knappen Spielen werden mildere Regeln bevorzugt.'},
     {id:'h_dom_3_contacts', active:true, type:'Handicap', target:'dominant', problem:'solo', strength:'stark', title:'Kontaktlimit', text:'{name}: Maximal 3 Ballkontakte, dann musst du abspielen.', why:'Begrenzt lange Dribblings und macht frühzeitige Orientierung notwendig.'},
     {id:'h_dom_pass_before_shot', active:true, type:'Handicap', target:'dominant', problem:'solo', strength:'mittel', title:'Erst passen, dann schießen', text:'{name}: Vor einem Torschuss musst du mindestens einmal abspielen.', why:'Verhindert direkte Alleingänge und bindet Mitspieler:innen ein.'},
     {id:'h_dom_double_pass_goal', active:true, type:'Handicap', target:'dominant', problem:'passes', strength:'leicht', title:'Doppelpass-Tor', text:'{name}: Du darfst Tore nur nach einem Doppelpass erzielen.', why:'Belässt Torgefahr, koppelt sie aber an Kooperation.'},
@@ -314,7 +314,7 @@
     {id:'fu_low_goal_double', active:true, type:'Procap', target:'low', problem:'any', strength:'stark', sports:['football'], title:'Doppeltes Tor', text:'Ein Tor von {name} zählt doppelt.', why:'Motiviert wenig beteiligte SuS, aktiv den Abschluss zu suchen.'},
     {id:'fu_team_no_direct_goal', active:true, type:'Teamregel', target:'team', problem:'any', strength:'mittel', sports:['football'], title:'Kein Direkt-Solo-Tor', text:'{team}: Ein Tor zählt nur, wenn vorher mindestens ein Pass gespielt wurde.', why:'Macht Fußball stärker zum Zusammenspiel.'},
 
-    {id:'football_pair_handhold', active:true, type:'Handicap', target:'leading', problem:'uneven', strength:'stark', sports:['football'], title:'Handfassung-Paar', text:'{team}: Zwei Personen spielen in der nächsten Runde mit Handfassung zusammen.', why:'Geeignet für Fußball-Kleinfeld ohne Schläger: Überlegenheit wird gebremst, Absprachen und Raumaufteilung werden wichtiger.'},
+    {id:'football_pair_handhold', active:true, type:'Handicap', target:'leading', problem:'uneven', strength:'mittel', sports:['football'], title:'Handfassung-Duo', text:'{team}: Zwei Personen spielen eine Runde als Handfassung-Duo. Kein Ziehen, kein Blocken.', why:'Geeignet für Fußball-Kleinfeld: Überlegenheit wird gebremst, Absprachen und gemeinsames Bewegen werden wichtiger.'},
     {id:'football_pair_third_person', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['football'], title:'Dritte Person statt Zweier-Duo', text:'{name}: Wenn du mit deiner stärksten Anspielperson kombinierst, muss vor dem Torabschluss eine dritte Person eingebunden werden.', why:'Reduziert Zweier-Dominanz und fördert breitere Beteiligung.'},
 
     // Basketball-spezifisch
@@ -644,12 +644,27 @@
   };
   function studentName(id){ return students.find(s=>s.id===id)?.name || teams.flatMap(t=>t.students).find(s=>s.id===id)?.name || 'Person'; }
   function applyTemplate(txt, ctx){
-    return String(txt||'').replaceAll('{name}', ctx.name||'Person').replaceAll('{team}', ctx.team||'Team').replaceAll('{otherTeam}', ctx.otherTeam||'Gegnerteam');
+    let out=String(txt||'').replaceAll('{name}', ctx.name||'Person').replaceAll('{team}', ctx.team||'Team').replaceAll('{otherTeam}', ctx.otherTeam||'Gegnerteam');
+    if(ctx && ctx.plural){
+      out=out.replace(/\bDu darfst\b/g,'Ihr dürft').replace(/\bdu darfst\b/g,'ihr dürft')
+             .replace(/\bDu musst\b/g,'Ihr müsst').replace(/\bdu musst\b/g,'ihr müsst')
+             .replace(/\bDu hast\b/g,'Ihr habt').replace(/\bdu hast\b/g,'ihr habt')
+             .replace(/\bDu spielst\b/g,'Ihr spielt').replace(/\bdu spielst\b/g,'ihr spielt')
+             .replace(/\bDu darfst\b/g,'Ihr dürft').replace(/\bdich\b/g,'euch')
+             .replace(/\bdein\b/g,'euer').replace(/\bdeine\b/g,'eure')
+             .replace(/\bfür dich\b/g,'für euch');
+    }
+    return out;
   }
   function strengthScore(str){ return {leicht:1, mittel:2, stark:3}[str] || 2; }
-  function pickRule({target, desired='mittel', exclude=[]}){
+  function isNoGoalRule(r){
+    const t=((r?.title||'')+' '+(r?.text||'')).toLowerCase();
+    return /kein(e|en)?\s+(tor|tore)|nicht\s+selbst\s+(abschließen|abschliessen|erzielen)|nur\s+vorlagen|selbst\s+abschließen\s+erst/.test(t);
+  }
+  function pickRule({target, desired='mittel', exclude=[], avoidNoGoal=false, maxStrength=null}){
     const desiredVal=strengthScore(desired);
-    const candidates=(ruleCards||[]).filter(r=>r.active!==false && r.target===target && !exclude.includes(r.id) && (ruleSports(r).includes('general') || ruleSports(r).includes(currentSport) || currentSport==='all')); 
+    const maxVal=maxStrength ? strengthScore(maxStrength) : null;
+    const candidates=(ruleCards||[]).filter(r=>r.active!==false && r.target===target && !exclude.includes(r.id) && (ruleSports(r).includes('general') || ruleSports(r).includes(currentSport) || currentSport==='all') && (!avoidNoGoal || !isNoGoalRule(r)) && (!maxVal || strengthScore(r.strength)<=maxVal)); 
     if(!candidates.length) return null;
     candidates.sort((a,b)=>Math.abs(strengthScore(a.strength)-desiredVal)-Math.abs(strengthScore(b.strength)-desiredVal));
     return candidates[0];
@@ -666,13 +681,18 @@
     if(names.length===2) return names[0]+' und '+names[1];
     return names.slice(0,-1).join(', ')+' und '+names[names.length-1];
   }
+  function namesCtx(ids, base={}){
+    const unique=[...new Set((ids||[]).filter(Boolean))];
+    return {...base, name:compactNames(unique), plural:unique.length>1};
+  }
   function makeRecommendations(f,obs){
     const rec=[]; const used=[]; const diff=(obs.scoreA||0)-(obs.scoreB||0);
     const lowA=obsArray(obs,'lowA').filter(Boolean), lowB=obsArray(obs,'lowB').filter(Boolean), domA=obsArray(obs,'domA').filter(Boolean), domB=obsArray(obs,'domB').filter(Boolean);
     const hasLow=[...lowA,...lowB].some(Boolean), hasDom=[...domA,...domB].some(Boolean);
-    const intensity=Math.abs(diff)>=3 ? 'stark' : (Math.abs(diff)>=2 ? 'mittel' : 'leicht');
+    // 3:1 ist im Unterricht noch kein klarer Kantersieg: dann lieber milde, spieloffene Ausgleichsregeln.
+    const intensity=Math.abs(diff)>=3 ? 'stark' : 'leicht';
     const teamA=getTeam(f.teamA)?.name||'Team A', teamB=getTeam(f.teamB)?.name||'Team B';
-    const addPick=(target, ctx, desired=intensity)=>{ const r=pickRule({target, desired, exclude:used}); if(r){ used.push(r.id); return addRuleRecommendation(rec,r,ctx); } return false; };
+    const addPick=(target, ctx, desired=intensity, opts={})=>{ const r=pickRule({target, desired, exclude:used, ...opts}); if(r){ used.push(r.id); return addRuleRecommendation(rec,r,ctx); } return false; };
     const isUneven=Math.abs(diff)>=2;
     const leadingSide=diff>0?'A':(diff<0?'B':null);
     const trailingSide=diff>0?'B':(diff<0?'A':null);
@@ -687,16 +707,22 @@
       const trailDom=trailingSide==='A'?domA:domB;
       const leadLow=leadingSide==='A'?lowA:lowB;
 
-      // 1) Führendes Team bremsen: Wenn eine oft beteiligte Person eingetragen ist, personenbezogen; sonst Team-Handicap.
-      if(leadDom.length){
-        addPick('dominant', {name:compactNames(leadDom), team:leadTeam, otherTeam:trailTeam}, intensity);
+      // 1) Führendes Team bremsen: bei mehreren häufig beteiligten Personen nie beide aus der Torgefahr nehmen.
+      // Bei 3:1 / 1:3 reicht eine milde, spieloffene Regel. Stärkere No-Goal-/Nur-Vorlagen-Regeln nur maximal für eine Person und nur bei klarerem Vorsprung.
+      if(leadDom.length && Math.abs(diff)>=3){
+        addPick('dominant', namesCtx(leadDom.slice(0,1), {team:leadTeam, otherTeam:trailTeam}), intensity);
+        if(leadDom.length>1 && rec.length<3){
+          addPick('leading', {team:leadTeam, otherTeam:trailTeam}, 'mittel') || addPick('dominant', namesCtx(leadDom.slice(1,2), {team:leadTeam, otherTeam:trailTeam}), 'leicht', {avoidNoGoal:true, maxStrength:'mittel'});
+        }
+      } else if(leadDom.length && Math.abs(diff)===2){
+        addPick('leading', {team:leadTeam, otherTeam:trailTeam}, 'leicht') || addPick('dominant', namesCtx(leadDom.slice(0,1), {team:leadTeam, otherTeam:trailTeam}), 'leicht', {avoidNoGoal:true, maxStrength:'leicht'});
       } else {
         addPick('leading', {team:leadTeam, otherTeam:trailTeam}, intensity);
       }
 
       // 2) Zurückliegendes Team stärken: Wenn wenig eingebundene Person(en) eingetragen sind, personenbezogener Procap; sonst Team-Procap.
       if(trailLow.length){
-        addPick('low', {name:compactNames(trailLow), team:trailTeam, otherTeam:leadTeam}, intensity);
+        addPick('low', namesCtx(trailLow, {team:trailTeam, otherTeam:leadTeam}), intensity);
       } else {
         addPick('trailing', {team:trailTeam, otherTeam:leadTeam}, intensity);
       }
@@ -705,17 +731,17 @@
       // Dadurch bleibt die Auswertung kompakt und die Verliererseite wird nicht zusätzlich benachteiligt.
       if(rec.length<3 && leadLow.length){
         const r=(ruleCards||[]).find(x=>x.active!==false && x.target==='team' && (ruleSports(x).includes('general') || ruleSports(x).includes(currentSport) || currentSport==='all'));
-        if(r && !used.includes(r.id)){ used.push(r.id); addRuleRecommendation(rec,r,{team:leadTeam, otherTeam:trailTeam, name:compactNames(leadLow)}); }
+        if(r && !used.includes(r.id)){ used.push(r.id); addRuleRecommendation(rec,r,namesCtx(leadLow,{team:leadTeam, otherTeam:trailTeam})); }
       }
       return rec.slice(0,3);
     }
 
     // Knapper Spielstand: Beteiligung ausgleichen, aber nur 1–3 Karten.
-    if(domA.length){ addPick('dominant', {name:compactNames(domA), team:teamA, otherTeam:teamB}, lowA.length||lowB.length?'mittel':'leicht'); }
-    if(domB.length && rec.length<2){ addPick('dominant', {name:compactNames(domB), team:teamB, otherTeam:teamA}, lowA.length||lowB.length?'mittel':'leicht'); }
+    if(domA.length){ addPick('dominant', namesCtx(domA.slice(0,1), {team:teamA, otherTeam:teamB}), 'leicht', {avoidNoGoal:true, maxStrength:'leicht'}); }
+    if(domB.length && rec.length<2){ addPick('dominant', namesCtx(domB.slice(0,1), {team:teamB, otherTeam:teamA}), 'leicht', {avoidNoGoal:true, maxStrength:'leicht'}); }
 
-    if(lowA.length && rec.length<3){ addPick('low', {name:compactNames(lowA), team:teamA, otherTeam:teamB}, hasDom?'mittel':'stark'); }
-    if(lowB.length && rec.length<3){ addPick('low', {name:compactNames(lowB), team:teamB, otherTeam:teamA}, hasDom?'mittel':'stark'); }
+    if(lowA.length && rec.length<3){ addPick('low', namesCtx(lowA, {team:teamA, otherTeam:teamB}), hasDom?'mittel':'stark'); }
+    if(lowB.length && rec.length<3){ addPick('low', namesCtx(lowB, {team:teamB, otherTeam:teamA}), hasDom?'mittel':'stark'); }
 
     // Wenn keine auffälligen Personen eingetragen sind: leichte gemeinsame Challenge.
     if(rec.length===0){ addPick('all',{team:'Beide Teams'},'leicht') || addPick('team',{team:'Beide Teams'},'mittel'); }
