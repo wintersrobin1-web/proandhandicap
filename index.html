@@ -180,7 +180,7 @@
     <aside class="grid">
       <div class="card">
         <h2>Pro-/Handicap bearbeiten</h2>
-        <div class="notice">Regelkarten anpassen, neu erstellen oder deaktivieren. Die App wählt anschließend nach Spielstand, Beteiligung und Hauptproblem passende Karten aus. In Regeltexten kannst du die Platzhalter {name} und {team} verwenden.</div>
+        <div class="notice">Regelkarten anpassen, neu erstellen oder deaktivieren. Die App wählt anschließend anhand von Spielstand und Beteiligung passende Karten aus. In Regeltexten kannst du die Platzhalter {name} und {team} verwenden.</div>
         <h3>Neue / ausgewählte Karte</h3>
         <input type="hidden" id="ruleId" />
         <label>Aktiv <input type="checkbox" id="ruleActive" checked></label>
@@ -188,9 +188,8 @@
           <label>Typ<br><select id="ruleType" style="width:100%"><option value="Handicap">Handicap</option><option value="Procap">Procap</option><option value="Teamregel">Teamregel</option><option value="Fairnessregel">Fairnessregel</option><option value="Ausgleichsregel">Ausgleichsregel</option></select></label>
           <label>Wirkung/Stärke<br><select id="ruleStrength" style="width:100%"><option value="leicht">leicht</option><option value="mittel" selected>mittel</option><option value="stark">stark</option></select></label>
         </div>
-        <div class="two" style="margin-top:8px">
-          <label>Auslöser/Ziel<br><select id="ruleTarget" style="width:100%"><option value="dominant">spielprägende Person</option><option value="low">wenig eingebundene Person</option><option value="team">Team / allgemeines Problem</option><option value="leading">führendes Team</option><option value="trailing">zurückliegendes Team</option><option value="all">immer möglich</option></select></label>
-          <label>Hauptproblem<br><select id="ruleProblem" style="width:100%"><option value="any">egal</option><option value="solo">zu viele Einzelaktionen</option><option value="passes">zu wenig Passspiel</option><option value="pressure">zu hoher Druck</option><option value="uneven">Spiel unausgeglichen</option><option value="rules">Regelstreit/Fairness</option><option value="ok">alle gut beteiligt</option></select></label>
+        <div style="margin-top:8px">
+          <label>Auslöser/Ziel<br><select id="ruleTarget" style="width:100%"><option value="dominant">spielprägende Person</option><option value="low">wenig eingebundene Person</option><option value="team">Teamregel bei ähnlicher Beteiligung</option><option value="leading">führendes Team</option><option value="trailing">zurückliegendes Team</option><option value="all">Zusatzchallenge, wenn keine Auffälligkeit eingetragen wurde</option></select></label>
         </div>
         <label>Titel<br><input id="ruleTitle" style="width:100%" placeholder="z. B. Spielmacher-Challenge"></label>
         <label>Regeltext<br><textarea id="ruleText" placeholder="z. B. {name}: Du darfst Tore vorbereiten, aber nicht selbst abschließen."></textarea></label>
@@ -217,6 +216,7 @@
   let ruleCards = [];
   let currentClassName = '';
   let timers = {};
+  const localPendingFields = {}; // verhindert, dass ein alter Live-Snapshot einen gerade gedrückten Timer-Button überschreibt
   let firebaseReady = false;
   let app, auth, db, fb;
   const DEFAULT_FIREBASE_CONFIG = {
@@ -366,7 +366,7 @@
   function createFields(){
     const fc=parseInt($('fieldCount').value)||3; fields=[];
     for(let i=0;i<Math.min(fc, Math.floor(teams.length/2)); i++){
-      fields.push({id:makeId(), index:i, name:`Kleinfeld ${i+1}`, teamA:teams[i*2]?.id, teamB:teams[i*2+1]?.id, scoreA:0, scoreB:0, round:1, recommendations:[], lastObservation:null, timer:{remaining:getDefaultTimerSeconds(), running:false, startedAt:null}, updatedAt:nowIso()});
+      fields.push({id:makeId(), index:i, name:`Kleinfeld ${i+1}`, teamA:teams[i*2]?.id, teamB:teams[i*2+1]?.id, scoreA:0, scoreB:0, round:1, recommendations:[], lastObservation:null, timer:{remaining:getDefaultTimerSeconds(), running:false, startedAt:null, startedAtMs:null, endsAtMs:null}, updatedAt:nowIso(), updatedAtMs:nowMs()});
     }
   }
   function getTeam(id){ return teams.find(t=>t.id===id); }
@@ -409,9 +409,6 @@
             <div class="row" style="margin-top:8px"><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','B',1)">Tor +</button><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','B',-1)">Tor −</button></div>
           </div>
         </div>
-        <label>Hauptproblem<br><select id="problem-${f.id}" style="width:100%">
-          <option value="solo">zu viele Einzelaktionen</option><option value="passes">zu wenig Passspiel</option><option value="pressure">zu hoher Druck auf Unsichere</option><option value="uneven">Spiel sehr unausgeglichen</option><option value="rules">Regelstreit/Fairnessproblem</option><option value="ok">alle waren gut beteiligt</option>
-        </select></label>
         <div id="rec-${f.id}">${recommendationsHtml(f)}</div>
       </div>
     </div>`;
@@ -423,11 +420,19 @@
     if(f) $('joinedFieldContainer').innerHTML=fieldCardHtml(f,true,true);
   }
   function getDefaultTimerSeconds(){ return (parseInt($('roundMinutes')?.value)||4)*60; }
-  function ensureFieldTimer(f){ if(!f.timer) f.timer={remaining:getDefaultTimerSeconds(), running:false, startedAt:null}; return f.timer; }
+  function ensureFieldTimer(f){
+    if(!f.timer) f.timer={remaining:getDefaultTimerSeconds(), running:false, startedAt:null, startedAtMs:null, endsAtMs:null};
+    if(typeof f.timer.remaining !== 'number') f.timer.remaining = getDefaultTimerSeconds();
+    return f.timer;
+  }
   function calcRemaining(f){
-    const t=ensureFieldTimer(f); let rem=Number(t.remaining ?? getDefaultTimerSeconds());
-    if(t.running && t.startedAt){ rem -= Math.floor((Date.now()-new Date(t.startedAt).getTime())/1000); }
-    return Math.max(0, rem);
+    const t=ensureFieldTimer(f);
+    if(t.running){
+      if(t.endsAtMs) return Math.max(0, Math.ceil((Number(t.endsAtMs)-nowMs())/1000));
+      if(t.startedAtMs) return Math.max(0, Number(t.remaining||getDefaultTimerSeconds()) - Math.floor((nowMs()-Number(t.startedAtMs))/1000));
+      if(t.startedAt) return Math.max(0, Number(t.remaining||getDefaultTimerSeconds()) - Math.floor((nowMs()-new Date(t.startedAt).getTime())/1000));
+    }
+    return Math.max(0, Number(t.remaining ?? getDefaultTimerSeconds()));
   }
   function formatTime(sec){ sec=Math.max(0,sec|0); return `${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`; }
   function updateTimerDisplays(){
@@ -438,38 +443,43 @@
   }
   setInterval(updateTimerDisplays, 500);
 
-  window.changeScore=function(fid, side, delta){ const f=fields.find(x=>x.id===fid); if(!f) return; if(side==='A') f.scoreA=Math.max(0,(f.scoreA||0)+delta); else f.scoreB=Math.max(0,(f.scoreB||0)+delta); pushLiveField(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); };
+  window.changeScore=function(fid, side, delta){ const f=fields.find(x=>x.id===fid); if(!f) return; if(side==='A') f.scoreA=Math.max(0,(f.scoreA||0)+delta); else f.scoreB=Math.max(0,(f.scoreB||0)+delta); markFieldChanged(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); pushLiveField(f); };
   window.startTimer=function(fid){
     const f=fields.find(x=>x.id===fid); if(!f) return;
     const rem=calcRemaining(f) || getDefaultTimerSeconds();
-    f.timer={remaining:rem, running:true, startedAt:nowIso()};
-    pushLiveField(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays();
+    const ms=nowMs();
+    f.timer={remaining:rem, running:true, startedAt:nowIso(), startedAtMs:ms, endsAtMs:ms + rem*1000};
+    markFieldChanged(f);
+    renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays();
+    pushLiveField(f);
   };
   window.pauseTimer=function(fid){
     const f=fields.find(x=>x.id===fid); if(!f) return;
-    f.timer={remaining:calcRemaining(f), running:false, startedAt:null};
-    pushLiveField(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays();
+    f.timer={remaining:calcRemaining(f), running:false, startedAt:null, startedAtMs:null, endsAtMs:null};
+    markFieldChanged(f);
+    renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays();
+    pushLiveField(f);
   };
-  window.resetFieldRound=function(fid){ const f=fields.find(x=>x.id===fid); if(f){f.scoreA=0;f.scoreB=0;f.recommendations=[];f.lastObservation=null;f.timer={remaining:getDefaultTimerSeconds(),running:false,startedAt:null}; pushLiveField(f);} renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); };
+  window.resetFieldRound=function(fid){ const f=fields.find(x=>x.id===fid); if(f){f.scoreA=0;f.scoreB=0;f.recommendations=[];f.lastObservation=null;f.timer={remaining:getDefaultTimerSeconds(),running:false,startedAt:null,startedAtMs:null,endsAtMs:null}; markFieldChanged(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); pushLiveField(f);} };
 
   window.finishRound=function(fid){
-    const f=fields.find(x=>x.id===fid); if(!f) return; f.timer={remaining:calcRemaining(f), running:false, startedAt:null};
+    const f=fields.find(x=>x.id===fid); if(!f) return; f.timer={remaining:calcRemaining(f), running:false, startedAt:null, startedAtMs:null, endsAtMs:null}; markFieldChanged(f);
     const obs={
       domA:$('domA-'+fid)?.value||'', lowA:$('lowA-'+fid)?.value||'', domB:$('domB-'+fid)?.value||'', lowB:$('lowB-'+fid)?.value||'',
-      problem:$('problem-'+fid)?.value||'solo', scoreA:f.scoreA||0, scoreB:f.scoreB||0, at:nowIso(), round:f.round||1
+      scoreA:f.scoreA||0, scoreB:f.scoreB||0, at:nowIso(), round:f.round||1
     };
     f.lastObservation=obs; f.recommendations=makeRecommendations(f,obs); f.round=(f.round||1)+1; f.scoreA=0; f.scoreB=0;
-    f.timer={remaining:getDefaultTimerSeconds(), running:false, startedAt:null};
-    pushLiveField(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); notify('Runde ausgewertet. Regelkarte testen!');
+    f.timer={remaining:getDefaultTimerSeconds(), running:false, startedAt:null, startedAtMs:null, endsAtMs:null};
+    markFieldChanged(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); pushLiveField(f); notify('Runde ausgewertet. Regelkarte testen!');
   };
   function studentName(id){ return students.find(s=>s.id===id)?.name || teams.flatMap(t=>t.students).find(s=>s.id===id)?.name || 'Person'; }
   function applyTemplate(txt, ctx){
     return String(txt||'').replaceAll('{name}', ctx.name||'Person').replaceAll('{team}', ctx.team||'Team').replaceAll('{otherTeam}', ctx.otherTeam||'Gegnerteam');
   }
   function strengthScore(str){ return {leicht:1, mittel:2, stark:3}[str] || 2; }
-  function pickRule({target, problem, desired='mittel', exclude=[]}){
+  function pickRule({target, desired='mittel', exclude=[]}){
     const desiredVal=strengthScore(desired);
-    const candidates=(ruleCards||[]).filter(r=>r.active!==false && r.target===target && (r.problem===problem || r.problem==='any' || problem==='any') && !exclude.includes(r.id));
+    const candidates=(ruleCards||[]).filter(r=>r.active!==false && r.target===target && !exclude.includes(r.id));
     if(!candidates.length) return null;
     candidates.sort((a,b)=>Math.abs(strengthScore(a.strength)-desiredVal)-Math.abs(strengthScore(b.strength)-desiredVal));
     return candidates[0];
@@ -481,32 +491,39 @@
   }
   function makeRecommendations(f,obs){
     const rec=[]; const used=[]; const diff=(obs.scoreA||0)-(obs.scoreB||0);
-    const problem=obs.problem||'solo';
-    const intensity=(Math.abs(diff)>=3 || problem==='uneven') ? 'stark' : 'mittel';
+    const hasLow=!!(obs.lowA||obs.lowB), hasDom=!!(obs.domA||obs.domB);
+    const intensity=Math.abs(diff)>=3 ? 'stark' : (Math.abs(diff)>=2 ? 'mittel' : 'leicht');
     const teamA=getTeam(f.teamA)?.name||'Team A', teamB=getTeam(f.teamB)?.name||'Team B';
-    const addPick=(target, prob, ctx, desired=intensity)=>{ const r=pickRule({target, problem:prob, desired, exclude:used}); if(r){ used.push(r.id); return addRuleRecommendation(rec,r,ctx); } return false; };
+    const addPick=(target, ctx, desired=intensity)=>{ const r=pickRule({target, desired, exclude:used}); if(r){ used.push(r.id); return addRuleRecommendation(rec,r,ctx); } return false; };
 
+    // 1) Personenbezogene Einträge haben Priorität: viel Beteiligung = Handicap, wenig Beteiligung = Procap.
     [{id:obs.domA, team:teamA, otherTeam:teamB}, {id:obs.domB, team:teamB, otherTeam:teamA}].filter(x=>x.id).forEach(x=>{
-      addPick('dominant', problem, {name:studentName(x.id), team:x.team, otherTeam:x.otherTeam}, problem==='solo'?'stark':'mittel');
+      addPick('dominant', {name:studentName(x.id), team:x.team, otherTeam:x.otherTeam}, hasLow?'mittel':'leicht');
     });
     [{id:obs.lowA, team:teamA, otherTeam:teamB}, {id:obs.lowB, team:teamB, otherTeam:teamA}].filter(x=>x.id).forEach(x=>{
-      addPick('low', problem, {name:studentName(x.id), team:x.team, otherTeam:x.otherTeam}, problem==='pressure'?'stark':'mittel');
+      addPick('low', {name:studentName(x.id), team:x.team, otherTeam:x.otherTeam}, hasDom?'mittel':'stark');
     });
 
-    if(problem && problem!=='ok') {
-      addPick('team', problem, {team:'Beide Teams', otherTeam:'Gegnerteam'}, intensity);
-    }
-    if(Math.abs(diff)>=3){
+    // 2) Deutlicher Spielstand erzeugt automatisch Ausgleichsregeln.
+    if(Math.abs(diff)>=2){
       if(diff>0){
-        addPick('leading','uneven',{team:teamA,otherTeam:teamB},'stark');
-        addPick('trailing','uneven',{team:teamB,otherTeam:teamA},'stark');
+        addPick('leading',{team:teamA,otherTeam:teamB}, intensity);
+        addPick('trailing',{team:teamB,otherTeam:teamA}, intensity);
       } else {
-        addPick('leading','uneven',{team:teamB,otherTeam:teamA},'stark');
-        addPick('trailing','uneven',{team:teamA,otherTeam:teamB},'stark');
+        addPick('leading',{team:teamB,otherTeam:teamA}, intensity);
+        addPick('trailing',{team:teamA,otherTeam:teamB}, intensity);
       }
     }
-    if(problem==='ok') addPick('all','ok',{team:'Beide Teams'},'leicht');
-    if(rec.length===0) addPick('team','solo',{team:'Beide Teams'},'mittel');
+
+    // 3) Wenn keine Person wenig eingebunden ist und kein deutlicher Rückstand besteht, kann die App eine allgemeine Zusatzchallenge geben.
+    if(!hasLow && !hasDom && Math.abs(diff)<2){
+      addPick('all',{team:'Beide Teams'},'leicht');
+    }
+
+    // 4) Wenn Beteiligung auffällig war, aber noch keine Teamregel entstanden ist, ergänzen wir eine einfache Teamregel.
+    if(rec.length<2 && (hasLow || hasDom)) addPick('team',{team:'Beide Teams', otherTeam:'Gegnerteam'}, hasLow?'mittel':'leicht');
+
+    if(rec.length===0) addPick('team',{team:'Beide Teams'},'mittel');
     if(rec.length===0) rec.push({type:'Teamregel · Standard', text:'Ein Tor zählt nur, wenn mindestens 3 verschiedene Teammitglieder beteiligt waren.', why:'Standardregel für mehr Miteinander.', strength:'mittel'});
     return rec.slice(0,4);
   }
@@ -526,27 +543,27 @@
         <label class="row" style="gap:8px"><input type="checkbox" ${r.active!==false?'checked':''} onchange="toggleRuleActive('${r.id}', this.checked)"><span class="badge ${r.type==='Procap'?'procap':r.type==='Handicap'?'handicap':'team'}">${escapeHtml(r.type)}</span> <strong>${escapeHtml(r.title||'Ohne Titel')}</strong></label>
         <div class="row"><button class="small" onclick="editRuleCard('${r.id}')">Bearbeiten</button><button class="small red" onclick="deleteRuleCard('${r.id}')">Löschen</button></div>
       </div>
-      <div class="muted" style="margin:4px 0">Ziel: ${escapeHtml(ruleTargetLabel(r.target))} · Problem: ${escapeHtml(problemLabel(r.problem))} · Wirkung: ${escapeHtml(r.strength||'mittel')} · ${r.active===false?'inaktiv':'aktiv'}</div>
+      <div class="muted" style="margin:4px 0">Ziel: ${escapeHtml(ruleTargetLabel(r.target))} · Wirkung: ${escapeHtml(r.strength||'mittel')} · ${r.active===false?'inaktiv':'aktiv'}</div>
       <div>${escapeHtml(r.text)}</div>
       <div class="muted">${escapeHtml(r.why||'')}</div>
     </div>`).join('');
   }
-  function ruleTargetLabel(v){ return ({dominant:'spielprägende Person', low:'wenig eingebundene Person', team:'Team/allgemeines Problem', leading:'führendes Team', trailing:'zurückliegendes Team', all:'immer möglich'}[v]||v||''); }
+  function ruleTargetLabel(v){ return ({dominant:'spielprägende Person', low:'wenig eingebundene Person', team:'Teamregel', leading:'führendes Team', trailing:'zurückliegendes Team', all:'Zusatzchallenge'}[v]||v||''); }
   function problemLabel(v){ return ({any:'egal', solo:'Soloaktionen', passes:'Passspiel', pressure:'Druck', uneven:'unausgeglichen', rules:'Regelstreit', ok:'alle beteiligt'}[v]||v||''); }
   window.toggleRuleActive=function(id, checked){
     const r=ruleCards.find(x=>x.id===id); if(!r) return;
     r.active=checked; localStorage.setItem('fbph_rule_cards', JSON.stringify(ruleCards)); saveLocal(); renderRuleEditor(); pushLiveRules();
   };
   window.newRuleCard=function(){
-    $('ruleId').value=''; $('ruleActive').checked=true; $('ruleType').value='Handicap'; $('ruleStrength').value='mittel'; $('ruleTarget').value='dominant'; $('ruleProblem').value='any'; $('ruleTitle').value=''; $('ruleText').value=''; $('ruleWhy').value='';
+    $('ruleId').value=''; $('ruleActive').checked=true; $('ruleType').value='Handicap'; $('ruleStrength').value='mittel'; $('ruleTarget').value='dominant'; $('ruleTitle').value=''; $('ruleText').value=''; $('ruleWhy').value='';
   };
   window.editRuleCard=function(id){
     const r=ruleCards.find(x=>x.id===id); if(!r) return;
-    $('ruleId').value=r.id; $('ruleActive').checked=r.active!==false; $('ruleType').value=r.type||'Teamregel'; $('ruleStrength').value=r.strength||'mittel'; $('ruleTarget').value=r.target||'team'; $('ruleProblem').value=r.problem||'any'; $('ruleTitle').value=r.title||''; $('ruleText').value=r.text||''; $('ruleWhy').value=r.why||'';
+    $('ruleId').value=r.id; $('ruleActive').checked=r.active!==false; $('ruleType').value=r.type||'Teamregel'; $('ruleStrength').value=r.strength||'mittel'; $('ruleTarget').value=r.target||'team'; $('ruleTitle').value=r.title||''; $('ruleText').value=r.text||''; $('ruleWhy').value=r.why||'';
     switchView('rules');
   };
   window.saveRuleCard=function(){
-    const r={id:$('ruleId').value||makeId(), active:$('ruleActive').checked, type:$('ruleType').value, strength:$('ruleStrength').value, target:$('ruleTarget').value, problem:$('ruleProblem').value, title:$('ruleTitle').value.trim()||'Regelkarte', text:$('ruleText').value.trim(), why:$('ruleWhy').value.trim()};
+    const r={id:$('ruleId').value||makeId(), active:$('ruleActive').checked, type:$('ruleType').value, strength:$('ruleStrength').value, target:$('ruleTarget').value, problem:'any', title:$('ruleTitle').value.trim()||'Regelkarte', text:$('ruleText').value.trim(), why:$('ruleWhy').value.trim()};
     if(!r.text) return notify('Bitte Regeltext eintragen.', true);
     const idx=ruleCards.findIndex(x=>x.id===r.id); if(idx>=0) ruleCards[idx]=r; else ruleCards.push(r);
     localStorage.setItem('fbph_rule_cards', JSON.stringify(ruleCards)); saveLocal(); renderRuleEditor(); newRuleCard(); notify('Regelkarte gespeichert.');
@@ -689,15 +706,28 @@
     if(!firebaseReady){ const ok=await initFirebaseFromConfig(getPreferredFirebaseConfigText(false)); if(!ok) return; }
     if(!teams.length || !fields.length) return notify('Erst Teams/Felder erstellen.', true);
     currentRoom = ($('roomCode').value.trim().toUpperCase() || `TEAM-${makeCode(3)}`).replace(/\s+/g,'-'); $('roomCode').value=currentRoom;
+    fields = fields.map(f => ({...f, timer: ensureFieldTimer(f), updatedAtMs: f.updatedAtMs || nowMs(), updatedAt: f.updatedAt || nowIso()}));
     const session={roomCode:currentRoom, className:currentClassName||$('className').value||'Klasse', teacherPin, createdAt:nowIso(), updatedAt:nowIso(), expiresAt:new Date(Date.now()+4*60*60*1000).toISOString(), students, teams, fields, ruleCards, settings:{roundMinutes:parseInt($('roundMinutes').value)||4, fieldCount:parseInt($('fieldCount').value)||3}};
     await fb.setDoc(fb.doc(db,'teamsportSessions',currentRoom), session);
     subscribeRoom(currentRoom); updateModePill(); $('roomInfo').innerHTML=`Raumcode: <span class="copy">${currentRoom}</span> · PIN lokal: <span class="copy">${teacherPin}</span> · Ablauf: ${new Date(session.expiresAt).toLocaleTimeString('de-DE')}`; notify('Live-Session erstellt.'); showIpadJoinAccess();
   };
+  function mergeIncomingFields(incoming){
+    const incomingList = Array.isArray(incoming) ? incoming : [];
+    const currentById = Object.fromEntries((fields||[]).map(f => [f.id, f]));
+    const now = nowMs();
+    return incomingList.map(nf => {
+      const lf = currentById[nf.id];
+      const pending = localPendingFields[nf.id] && localPendingFields[nf.id] > now;
+      if(pending && lf && Number(lf.updatedAtMs||0) > Number(nf.updatedAtMs||0)) return lf;
+      if(lf && Number(nf.updatedAtMs||0) >= Number(lf.updatedAtMs||0)) delete localPendingFields[nf.id];
+      return nf;
+    });
+  }
   function subscribeRoom(code){
     if(liveUnsub) liveUnsub();
     liveUnsub = fb.onSnapshot(fb.doc(db,'teamsportSessions',code),(snap)=>{
       if(!snap.exists()) { notify('Live-Session wurde gelöscht.', true); currentRoom=''; updateModePill(); return; }
-      const d=snap.data(); students=d.students||students; teams=d.teams||teams; fields=d.fields||fields; ruleCards=d.ruleCards||ruleCards; currentClassName=d.className||currentClassName; renderAll(); refreshJoinedField(); updateTimerDisplays(); updateModePill();
+      const d=snap.data(); students=d.students||students; teams=d.teams||teams; fields=mergeIncomingFields(d.fields||fields); ruleCards=d.ruleCards||ruleCards; currentClassName=d.className||currentClassName; renderAll(); refreshJoinedField(); updateTimerDisplays(); updateModePill();
     });
   }
   async function pushLiveField(f){
@@ -716,7 +746,7 @@
     await fb.deleteDoc(fb.doc(db,'teamsportSessions',currentRoom)); currentRoom=''; updateModePill(); $('roomInfo').textContent='Session gelöscht.'; notify('Live-Session gelöscht.');
   };
   window.clearRoundData=async function(){
-    fields=fields.map(f=>({...f, scoreA:0, scoreB:0, round:1, recommendations:[], lastObservation:null, timer:{remaining:getDefaultTimerSeconds(), running:false, startedAt:null}}));
+    fields=fields.map(f=>({...f, scoreA:0, scoreB:0, round:1, recommendations:[], lastObservation:null, timer:{remaining:getDefaultTimerSeconds(), running:false, startedAt:null, startedAtMs:null, endsAtMs:null}, updatedAt:nowIso(), updatedAtMs:nowMs()}));
     if(currentRoom && firebaseReady) await fb.updateDoc(fb.doc(db,'teamsportSessions',currentRoom), {fields, updatedAt:nowIso()});
     renderAll(); notify('Rundendaten gelöscht. Teams bleiben erhalten.');
   };
