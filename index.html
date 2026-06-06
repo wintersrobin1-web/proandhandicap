@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Teamsport Pro- und Handicap Generator – Offline & Live v15</title>
+  <title>Teamsport Pro- und Handicap Generator – Offline & Live v16</title>
   <style>
     :root{
       --green:#16a34a; --green-dark:#15803d; --green-soft:#ecfdf5;
@@ -30,8 +30,15 @@
     .qr-grid{display:grid;grid-template-columns:180px 1fr;gap:12px;align-items:center}
     .qr-code{width:170px;height:170px;background:#fff;border:1px solid var(--border);border-radius:14px;display:flex;align-items:center;justify-content:center;padding:10px}
     .qr-link{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word-break:break-all;background:white;border:1px dashed #cbd5e1;border-radius:12px;padding:8px}
+    .overview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}.overview-field{background:#fff;border:2px solid #dcfce7;border-radius:18px;padding:14px;box-shadow:var(--shadow)}.overview-field h3{margin:0 0 8px 0;color:#166534}.overview-rec{border:1px solid var(--border);border-radius:14px;padding:10px;margin-top:8px;background:#f8fafc}.overview-score{font-size:22px;font-weight:900}.global-clock{border:1px solid #bbf7d0;background:#ecfdf5;border-radius:16px;padding:10px;margin:10px 0}.global-clock strong{color:#166534}
     @media(max-width:720px){.qr-grid{grid-template-columns:1fr}.qr-code{margin:auto}}
-  </style>
+  
+    .team-role-hint { margin: 8px 0 12px 0; line-height: 1.3; }
+    .obs-block { display: grid; gap: 8px; margin: 10px 0 12px 0; }
+    .obs-block label { font-size: 12px; color: #475569; font-weight: 700; }
+    .obs-block select { margin-top: 4px; }
+
+</style>
 </head>
 <body>
 <div class="app">
@@ -45,6 +52,7 @@
       <button class="tab active" id="tabTeacher" onclick="switchView('teacher')">Lehrkraft</button>
       <button class="tab" id="tabPlayer" onclick="switchView('player')">iPad beitreten</button>
       <button class="tab" id="tabGame" onclick="switchView('game')">Spielmodus</button>
+      <button class="tab" id="tabDisplay" onclick="switchView('display')">Regelübersicht</button>
       <button class="tab" id="tabRules" onclick="switchView('rules')">Pro-/Handicaps</button>
     </div>
   </header>
@@ -108,6 +116,7 @@
         <div class="row" style="margin-top:8px">
           <button class="ghost" onclick="showIpadJoinAccess()">iPad-Link & QR anzeigen</button>
           <button class="ghost" onclick="copyIpadJoinLink()">iPad-Link kopieren</button>
+          <button class="ghost" onclick="copyDisplayLink()">Regelübersicht-Link kopieren</button>
         </div>
         <div id="ipadJoinAccess" class="qr-panel hidden">
           <div class="qr-grid">
@@ -134,6 +143,7 @@
       </div>
       <div class="card">
         <h2>Felder / Spielübersicht</h2>
+        <div class="global-clock"><strong>Globale Uhr</strong><div class="muted">Startet, pausiert oder setzt alle Kleinfeld-Uhren gleichzeitig.</div><div class="row" style="margin-top:8px"><button class="primary" onclick="globalStartTimers()">Alle starten</button><button class="ghost" onclick="globalPauseTimers()">Alle pausieren</button><button class="orange" onclick="globalResetTimers()">Alle resetten</button></div></div>
         <div id="fieldsContainer" class="muted">Nach dem Erstellen erscheinen hier die Kleinfelder.</div>
       </div>
     </main>
@@ -173,8 +183,18 @@
 
   <section id="gameView" class="hidden card">
     <h2>Spielmodus</h2>
-    <div class="notice">Offline: Die Lehrkraft kann direkt auf jedem Kleinfeld Timer starten, Spielstand ändern und spielprägende/wenig eingebundene SuS eintragen. Live: dieselbe Ansicht wird über den Raumcode synchronisiert.</div>
+    <div class="notice">Offline: Die Lehrkraft kann direkt auf jedem Kleinfeld Timer starten, Spielstand ändern und oft/wenig beteiligte SuS eintragen. Live: dieselbe Ansicht wird über den Raumcode synchronisiert.</div>
+    <div class="global-clock"><strong>Globale Uhr</strong><div class="row" style="margin-top:8px"><button class="primary" onclick="globalStartTimers()">Alle starten</button><button class="ghost" onclick="globalPauseTimers()">Alle pausieren</button><button class="orange" onclick="globalResetTimers()">Alle resetten</button></div></div>
     <div id="gameFieldsContainer" class="field-grid" style="margin-top:12px"></div>
+  </section>
+
+
+
+  <section id="displayView" class="hidden card">
+    <h2>Regelübersicht für die nächste Runde</h2>
+    <div class="notice">Diese Ansicht ist für ein iPad/Beamer gedacht: Die SuS sehen nach der Auswertung schnell, welche Pro-/Handicaps auf ihrem Feld gelten. Die Lehrkraft kann dann zügig durchgehen.</div>
+    <div class="global-clock"><strong>Globale Uhr</strong><div class="row" style="margin-top:8px"><button class="primary" onclick="globalStartTimers()">Alle starten</button><button class="ghost" onclick="globalPauseTimers()">Alle pausieren</button><button class="orange" onclick="globalResetTimers()">Alle resetten</button></div></div>
+    <div id="displayOverviewContainer" class="overview-grid" style="margin-top:12px"></div>
   </section>
 
   <section id="rulesView" class="hidden grid main">
@@ -192,7 +212,7 @@
           <label>Wirkung/Stärke<br><select id="ruleStrength" style="width:100%"><option value="leicht">leicht</option><option value="mittel" selected>mittel</option><option value="stark">stark</option></select></label>
         </div>
         <div style="margin-top:8px">
-          <label>Auslöser/Ziel<br><select id="ruleTarget" style="width:100%"><option value="dominant">spielprägende Person</option><option value="low">wenig eingebundene Person</option><option value="team">Teamregel bei ähnlicher Beteiligung</option><option value="leading">führendes Team</option><option value="trailing">zurückliegendes Team</option><option value="all">Zusatzchallenge, wenn keine Auffälligkeit eingetragen wurde</option></select></label>
+          <label>Auslöser/Ziel<br><select id="ruleTarget" style="width:100%"><option value="dominant">Person war oft beteiligt</option><option value="low">Person kam wenig ins Spiel</option><option value="team">Teamregel bei ähnlicher Beteiligung</option><option value="leading">führendes Team</option><option value="trailing">zurückliegendes Team</option><option value="all">Zusatzchallenge, wenn keine Auffälligkeit eingetragen wurde</option></select></label>
         </div>
         <label>Titel<br><input id="ruleTitle" style="width:100%" placeholder="z. B. Spielmacher-Challenge"></label>
         <label>Regeltext<br><textarea id="ruleText" placeholder="z. B. {name}: Du darfst Tore vorbereiten, aber nicht selbst abschließen."></textarea></label>
@@ -239,7 +259,7 @@
   localStorage.setItem('fbph_teacher_pin', teacherPin);
 
   const DEFAULT_RULE_CARDS = [
-    // Handicaps für spielprägende/dominante Einzelpersonen
+    // Handicaps für spielprägende/oft beteiligte Einzelpersonen
     {id:'h_dom_assist_only', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', title:'Spielmacherrolle', text:'{name}: Du darfst Tore vorbereiten, aber in der nächsten Runde nicht selbst abschließen.', why:'Lenkt Dominanz in Vorlagen und Zusammenspiel um.'},
     {id:'h_dom_3_contacts', active:true, type:'Handicap', target:'dominant', problem:'solo', strength:'stark', title:'Kontaktlimit', text:'{name}: Maximal 3 Ballkontakte, dann musst du abspielen.', why:'Begrenzt lange Dribblings und macht frühzeitige Orientierung notwendig.'},
     {id:'h_dom_pass_before_shot', active:true, type:'Handicap', target:'dominant', problem:'solo', strength:'mittel', title:'Erst passen, dann schießen', text:'{name}: Vor einem Torschuss musst du mindestens einmal abspielen.', why:'Verhindert direkte Alleingänge und bindet Mitspieler:innen ein.'},
@@ -249,7 +269,7 @@
     {id:'h_dom_after_goal_assist', active:true, type:'Handicap', target:'dominant', problem:'solo', strength:'mittel', title:'Nach Tor: Vorlage', text:'{name}: Wenn du ein Tor erzielt hast, musst du beim nächsten Angriff zuerst eine Vorlage geben.', why:'Erfolg wird an Teamdienlichkeit gekoppelt.'},
     {id:'h_dom_third_person', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', title:'Dritte Person einbeziehen', text:'{name}: Vor einem Torabschluss muss über dich mindestens eine dritte Person eingebunden werden.', why:'Verhindert Zweier-Dominanz und öffnet das Spiel.'},
 
-    // Procaps für wenig eingebundene Einzelpersonen
+    // Procaps für wenig beteiligte Einzelpersonen
     {id:'p_low_3_sec', active:true, type:'Procap', target:'low', problem:'any', strength:'mittel', title:'3-Sekunden-Schutz', text:'{name}: Nach deiner Ballannahme hast du 3 Sekunden Schutz vor direktem Angriff.', why:'Gibt Zeit für Ballkontrolle und Entscheidung.'},
     {id:'p_low_goal_if_involved', active:true, type:'Procap', target:'low', problem:'solo', strength:'mittel', title:'Einbindungsbonus', text:'{team}: Ein Tor zählt doppelt, wenn {name} am Angriff beteiligt war.', why:'Macht Einbindung zum gemeinsamen Teamziel.'},
     {id:'p_low_pass_bonus', active:true, type:'Procap', target:'low', problem:'passes', strength:'leicht', title:'Pass-Bonus', text:'Ein gelungener Pass von {name} zählt als Zusatzpunkt für {team}.', why:'Wertet aktive Beteiligung niedrigschwellig auf.'},
@@ -283,7 +303,7 @@
     {id:'c_ok_double_pass', active:true, type:'Teamregel', target:'all', problem:'ok', strength:'leicht', title:'Nächste Challenge: Doppelpass', text:'Das nächste Tor zählt nur nach einem erkennbaren Doppelpass.', why:'Erhöht den kooperativen Anspruch bei funktionierendem Spiel.'}
     ,
     // Floorball/Unihockey-spezifisch
-    {id:'fb_dom_flachpass', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['floorball'], title:'Flachpass-Spielmacher:in', text:'{name}: Du darfst in der nächsten Runde nur flache Pässe spielen und erst nach einer Vorlage abschließen.', why:'Passt zu Floorball: sichere flache Pässe und Teamspiel statt Alleingang.'},
+    {id:'fb_dom_schiebepass', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['floorball'], title:'Schiebepass-Spielmacher:in', text:'{name}: Du darfst in der nächsten Runde nur kontrollierte Schiebepässe/Vorlagen spielen und nicht selbst aus dem Dribbling abschließen.', why:'Passt zu Floorball: Dominanz wird in sichere Vorlagen und Teamspiel umgelenkt.'},
     {id:'fb_dom_no_dribble_lane', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', sports:['floorball'], title:'Kein Laufweg-Solo', text:'{name}: Du darfst den Ball nicht durch das ganze Feld führen – nach spätestens 3 Kontakten muss ein Pass kommen.', why:'Begrenzt dominante Dribblings mit Schläger und fördert frühes Abspiel.'},
     {id:'fb_low_stick_ready', active:true, type:'Procap', target:'low', problem:'any', strength:'mittel', sports:['floorball'], title:'Sichere Annahme', text:'{name}: Wenn dein Schläger sichtbar spielbereit am Boden ist, darfst du beim ersten Kontakt 3 Sekunden nicht attackiert werden.', why:'Gibt weniger eingebundenen SuS Zeit für Ballannahme und Entscheidung.'},
     {id:'fb_team_banktor_pass', active:true, type:'Teamregel', target:'team', problem:'any', strength:'mittel', sports:['floorball'], title:'Banktor nur nach Pass', text:'{team}: Ein Tor zählt nur, wenn der letzte Ball vor dem Abschluss ein Pass war.', why:'Verhindert reine Einzelaktionen auf kleine Tore.'},
@@ -291,8 +311,11 @@
     // Fußball-spezifisch
     {id:'fu_dom_weak_foot', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['football'], title:'Schwacher Fuß', text:'{name}: Tore zählen für dich nur mit deinem schwächeren Fuß.', why:'Bremst dominante Spieler:innen, ohne sie aus dem Spiel zu nehmen.'},
     {id:'fu_dom_two_touch', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['football'], title:'Zwei-Kontakt-Regel', text:'{name}: Du darfst maximal zwei Ballkontakte haben, dann muss ein Pass kommen.', why:'Fördert Orientierung vor der Ballannahme und schnelles Zusammenspiel.'},
-    {id:'fu_low_goal_double', active:true, type:'Procap', target:'low', problem:'any', strength:'stark', sports:['football'], title:'Doppeltes Tor', text:'Ein Tor von {name} zählt doppelt.', why:'Motiviert wenig eingebundene SuS, aktiv den Abschluss zu suchen.'},
+    {id:'fu_low_goal_double', active:true, type:'Procap', target:'low', problem:'any', strength:'stark', sports:['football'], title:'Doppeltes Tor', text:'Ein Tor von {name} zählt doppelt.', why:'Motiviert wenig beteiligte SuS, aktiv den Abschluss zu suchen.'},
     {id:'fu_team_no_direct_goal', active:true, type:'Teamregel', target:'team', problem:'any', strength:'mittel', sports:['football'], title:'Kein Direkt-Solo-Tor', text:'{team}: Ein Tor zählt nur, wenn vorher mindestens ein Pass gespielt wurde.', why:'Macht Fußball stärker zum Zusammenspiel.'},
+
+    {id:'football_pair_handhold', active:true, type:'Handicap', target:'leading', problem:'uneven', strength:'stark', sports:['football'], title:'Handfassung-Paar', text:'{team}: Zwei Personen spielen in der nächsten Runde mit Handfassung zusammen.', why:'Geeignet für Fußball-Kleinfeld ohne Schläger: Überlegenheit wird gebremst, Absprachen und Raumaufteilung werden wichtiger.'},
+    {id:'football_pair_third_person', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['football'], title:'Dritte Person statt Zweier-Duo', text:'{name}: Wenn du mit deiner stärksten Anspielperson kombinierst, muss vor dem Torabschluss eine dritte Person eingebunden werden.', why:'Reduziert Zweier-Dominanz und fördert breitere Beteiligung.'},
 
     // Basketball-spezifisch
     {id:'bb_dom_weak_hand', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['basketball'], title:'Schwache Hand', text:'{name}: Du darfst in der nächsten Runde nur mit deiner schwächeren Hand dribbeln.', why:'Sportartspezifisches Handicap, das Dominanz reduziert und Technik variiert.'},
@@ -340,11 +363,12 @@
 
   // ---------------- VIEW ----------------
   window.switchView = function(view){
-    ['teacher','player','game','rules'].forEach(v=>{
+    ['teacher','player','game','display','rules'].forEach(v=>{
       $(v+'View').classList.toggle('hidden', v!==view);
       $('tab'+v[0].toUpperCase()+v.slice(1)).classList.toggle('active', v===view);
     });
     if(view==='game') renderGameFields();
+    if(view==='display') renderDisplayOverview();
     if(view==='rules') renderRuleEditor();
   };
 
@@ -449,7 +473,7 @@
     if(!fields.length){ $('fieldsContainer').innerHTML='<div class="muted">Nach dem Erstellen erscheinen hier die Kleinfelder.</div>'; return; }
     $('fieldsContainer').innerHTML='<div class="field-grid">'+fields.map(f=>fieldCardHtml(f,true)).join('')+'</div>';
   }
-  function renderAll(){ renderStudents(); renderTeams(); renderFieldsSummary(); renderGameFields(); renderRuleEditor(); refreshClassSelect(); $('className').value=currentClassName; saveLocal(); }
+  function renderAll(){ renderStudents(); renderTeams(); renderFieldsSummary(); renderGameFields(); renderDisplayOverview(); renderRuleEditor(); refreshClassSelect(); $('className').value=currentClassName; saveLocal(); }
 
   // ---------------- GAME UI ----------------
   function obsArray(d,key){ const v=d?.[key]; return Array.isArray(v) ? [v[0]||'', v[1]||''] : [v||'', '']; }
@@ -458,10 +482,12 @@
     const ex=new Set((exclude||[]).filter(Boolean).map(String));
     return '<option value="">-- auswählen --</option>'+t.students.filter(s=>String(s.id)===String(selected)||!ex.has(String(s.id))).map(s=>`<option value="${s.id}" ${String(selected)===String(s.id)?'selected':''}>${escapeHtml(s.name)}</option>`).join('');
   }
-  function obsSelects(fid, teamId, key, label){
+  function obsSelects(fid, teamId, key, labelA, labelB){
     const d=(fields.find(x=>x.id===fid)?.observationDraft)||{}; const arr=obsArray(d,key);
-    return `<label>${label} 1<br><select class="select-wide" id="${key}0-${fid}" onchange="updateObservation('${fid}','${key}',0,this.value)">${teamOptions(teamId,arr[0],[arr[1]])}</select></label><br><br>
-            <label>${label} 2<br><select class="select-wide" id="${key}1-${fid}" onchange="updateObservation('${fid}','${key}',1,this.value)">${teamOptions(teamId,arr[1],[arr[0]])}</select></label>`;
+    return `<div class="obs-block">
+              <label>${labelA}<br><select class="select-wide" id="${key}0-${fid}" onchange="updateObservation('${fid}','${key}',0,this.value)">${teamOptions(teamId,arr[0],[arr[1]])}</select></label>
+              <label>${labelB}<br><select class="select-wide" id="${key}1-${fid}" onchange="updateObservation('${fid}','${key}',1,this.value)">${teamOptions(teamId,arr[1],[arr[0]])}</select></label>
+            </div>`;
   }
   function fieldCardHtml(f, interactive=true, joined=false){
     const a=getTeam(f.teamA), b=getTeam(f.teamB); const mins=parseInt($('roundMinutes').value)||4;
@@ -479,13 +505,13 @@
         </div>
         <div class="two">
           <div class="side"><h4>${escapeHtml(a?.name||'Team A')}</h4>${teamRoleHint(a, f.onFieldSize || parseInt($('teamSize')?.value)||3)}
-            ${obsSelects(f.id,f.teamA,'domA','spielprägend')}<br><br>
-            ${obsSelects(f.id,f.teamA,'lowA','wenig eingebunden')}
+            ${obsSelects(f.id,f.teamA,'domA','War oft beteiligt','War auch oft beteiligt')}
+            ${obsSelects(f.id,f.teamA,'lowA','Kam wenig ins Spiel','Kam auch wenig ins Spiel')}
             <div class="row" style="margin-top:8px"><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','A',1)">Tor +</button><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','A',-1)">Tor −</button></div>
           </div>
           <div class="side"><h4>${escapeHtml(b?.name||'Team B')}</h4>${teamRoleHint(b, f.onFieldSize || parseInt($('teamSize')?.value)||3)}
-            ${obsSelects(f.id,f.teamB,'domB','spielprägend')}<br><br>
-            ${obsSelects(f.id,f.teamB,'lowB','wenig eingebunden')}
+            ${obsSelects(f.id,f.teamB,'domB','War oft beteiligt','War auch oft beteiligt')}
+            ${obsSelects(f.id,f.teamB,'lowB','Kam wenig ins Spiel','Kam auch wenig ins Spiel')}
             <div class="row" style="margin-top:8px"><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','B',1)">Tor +</button><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','B',-1)">Tor −</button></div>
           </div>
         </div>
@@ -540,13 +566,17 @@
     localPendingFields[f.id] = nowMs() + 1200;
   }
 
-  window.updateObservation=function(fid, key, value){
+  window.updateObservation=function(fid, key, index, value){
     const f=fields.find(x=>x.id===fid); if(!f) return;
     if(!f.observationDraft) f.observationDraft={domA:['',''],lowA:['',''],domB:['',''],lowB:['','']};
-    f.observationDraft[key]=value||'';
+    const arr=obsArray(f.observationDraft,key);
+    const i = Number(index) || 0;
+    arr[i]=value||'';
+    f.observationDraft[key]=arr;
     markFieldChanged(f);
-    // Nicht komplett neu rendern, damit die Bedienung stabil bleibt; andere Ansichten/Geräte erhalten den Live-Stand.
+    // Nicht komplett neu rendern, damit die Dropdown-Auswahl stabil bleibt; andere Ansichten/Geräte erhalten den Live-Stand.
     renderFieldsSummary();
+    renderDisplayOverview();
     if(selectedJoinedFieldId && selectedJoinedFieldId!==fid) refreshJoinedField();
     pushLiveField(f);
   };
@@ -562,7 +592,7 @@
         f.rotationHintAtMs=nowMs();
       }
     }
-    markFieldChanged(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); pushLiveField(f);
+    markFieldChanged(f); renderGameFields(); renderFieldsSummary(); renderDisplayOverview(); refreshJoinedField(); updateTimerDisplays(); pushLiveField(f);
   };
   window.startTimer=function(fid){
     const f=fields.find(x=>x.id===fid); if(!f) return;
@@ -570,17 +600,17 @@
     const ms=nowMs();
     f.timer={remaining:rem, running:true, startedAt:nowIso(), startedAtMs:ms, endsAtMs:ms + rem*1000};
     markFieldChanged(f);
-    renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays();
+    renderGameFields(); renderFieldsSummary(); renderDisplayOverview(); refreshJoinedField(); updateTimerDisplays();
     pushLiveField(f);
   };
   window.pauseTimer=function(fid){
     const f=fields.find(x=>x.id===fid); if(!f) return;
     f.timer={remaining:calcRemaining(f), running:false, startedAt:null, startedAtMs:null, endsAtMs:null};
     markFieldChanged(f);
-    renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays();
+    renderGameFields(); renderFieldsSummary(); renderDisplayOverview(); refreshJoinedField(); updateTimerDisplays();
     pushLiveField(f);
   };
-  window.resetFieldRound=function(fid){ const f=fields.find(x=>x.id===fid); if(f){f.scoreA=0;f.scoreB=0;f.recommendations=[];f.lastObservation=null;f.observationDraft={domA:['',''],lowA:['',''],domB:['',''],lowB:['','']};f.timer={remaining:getDefaultTimerSeconds(),running:false,startedAt:null,startedAtMs:null,endsAtMs:null}; f.rotationHint=''; f.rotationHintAtMs=null; markFieldChanged(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); pushLiveField(f);} };
+  window.resetFieldRound=function(fid){ const f=fields.find(x=>x.id===fid); if(f){f.scoreA=0;f.scoreB=0;f.recommendations=[];f.lastObservation=null;f.observationDraft={domA:['',''],lowA:['',''],domB:['',''],lowB:['','']};f.timer={remaining:getDefaultTimerSeconds(),running:false,startedAt:null,startedAtMs:null,endsAtMs:null}; f.rotationHint=''; f.rotationHintAtMs=null; markFieldChanged(f); renderGameFields(); renderFieldsSummary(); renderDisplayOverview(); refreshJoinedField(); updateTimerDisplays(); pushLiveField(f);} };
 
   window.finishRound=function(fid){
     const f=fields.find(x=>x.id===fid); if(!f) return; f.timer={remaining:calcRemaining(f), running:false, startedAt:null, startedAtMs:null, endsAtMs:null}; markFieldChanged(f);
@@ -592,7 +622,7 @@
     f.lastObservation=obs; f.recommendations=makeRecommendations(f,obs); f.round=(f.round||1)+1; f.scoreA=0; f.scoreB=0; f.observationDraft={domA:['',''],lowA:['',''],domB:['',''],lowB:['','']};
     f.timer={remaining:getDefaultTimerSeconds(), running:false, startedAt:null, startedAtMs:null, endsAtMs:null};
     f.rotationHint=''; f.rotationHintAtMs=null;
-    markFieldChanged(f); renderGameFields(); renderFieldsSummary(); refreshJoinedField(); updateTimerDisplays(); pushLiveField(f); notify('Runde ausgewertet. Regelkarte testen!');
+    markFieldChanged(f); renderGameFields(); renderFieldsSummary(); renderDisplayOverview(); refreshJoinedField(); updateTimerDisplays(); pushLiveField(f); notify('Runde ausgewertet. Regelkarte testen!');
   };
   function studentName(id){ return students.find(s=>s.id===id)?.name || teams.flatMap(t=>t.students).find(s=>s.id===id)?.name || 'Person'; }
   function applyTemplate(txt, ctx){
@@ -638,7 +668,7 @@
       }
     }
 
-    // 3) Wenn keine Person wenig eingebunden ist und kein deutlicher Rückstand besteht, kann die App eine allgemeine Zusatzchallenge geben.
+    // 3) Wenn keine Person als wenig beteiligt eingetragen ist und kein deutlicher Rückstand besteht, kann die App eine allgemeine Zusatzchallenge geben.
     if(!hasLow && !hasDom && Math.abs(diff)<2){
       addPick('all',{team:'Beide Teams'},'leicht');
     }
@@ -657,6 +687,59 @@
   }
 
 
+  function renderDisplayOverview(){
+    const c=$('displayOverviewContainer'); if(!c) return;
+    if(!fields.length){ c.innerHTML='<div class="muted">Noch keine Felder vorhanden.</div>'; return; }
+    c.innerHTML = fields.map(f=>{
+      const a=getTeam(f.teamA), b=getTeam(f.teamB);
+      const rec=(f.recommendations||[]).length ? recommendationsHtml(f) : '<div class="overview-rec"><strong>Noch keine Auswertung</strong><div class="muted">Nach der Runde auswerten.</div></div>';
+      return `<div class="overview-field"><h3>${escapeHtml(f.name)}</h3><div class="overview-score">${escapeHtml(a?.name||'Team A')} ${f.scoreA||0} : ${f.scoreB||0} ${escapeHtml(b?.name||'Team B')}</div><div class="muted">Runde ${f.round||1} · Uhr: <span data-timer-id="${f.id}">${formatTime(calcRemaining(f))}</span></div>${rec}</div>`;
+    }).join('');
+  }
+
+  function makeDisplayLink(code){
+    const url = new URL(window.location.href);
+    url.searchParams.set('view','display');
+    url.searchParams.set('join', code);
+    url.hash='';
+    return url.toString();
+  }
+  window.copyDisplayLink=async function(){
+    const code=(currentRoom || $('roomCode').value || '').trim().toUpperCase();
+    if(!code) return notify('Erst Raum erstellen oder Raumcode eintragen.', true);
+    const link=makeDisplayLink(code);
+    try{ await navigator.clipboard.writeText(link); notify('Regelübersicht-Link kopiert.'); }
+    catch(e){ notify('Kopieren nicht möglich: '+(e.message||e), true); }
+  };
+
+  async function pushLiveFields(){
+    saveLocal();
+    if(!currentRoom || !firebaseReady) return;
+    try{ await fb.updateDoc(fb.doc(db,'teamsportSessions',currentRoom), {fields, updatedAt:nowIso()}); }
+    catch(e){ console.warn(e); notify('Live-Speichern fehlgeschlagen: '+(e.code||e.message||e), true); }
+  }
+
+  window.globalStartTimers=function(){
+    if(!fields.length) return notify('Noch keine Felder vorhanden.', true);
+    const base = calcRemaining(fields[0]) || getDefaultTimerSeconds();
+    const ms=nowMs();
+    fields.forEach(f=>{ f.timer={remaining:base, running:true, startedAt:nowIso(), startedAtMs:ms, endsAtMs:ms+base*1000}; markFieldChanged(f); });
+    renderGameFields(); renderFieldsSummary(); renderDisplayOverview(); refreshJoinedField(); updateTimerDisplays(); pushLiveFields();
+  };
+  window.globalPauseTimers=function(){
+    if(!fields.length) return notify('Noch keine Felder vorhanden.', true);
+    const base=calcRemaining(fields[0]);
+    fields.forEach(f=>{ f.timer={remaining:base, running:false, startedAt:null, startedAtMs:null, endsAtMs:null}; markFieldChanged(f); });
+    renderGameFields(); renderFieldsSummary(); renderDisplayOverview(); refreshJoinedField(); updateTimerDisplays(); pushLiveFields();
+  };
+  window.globalResetTimers=function(){
+    if(!fields.length) return notify('Noch keine Felder vorhanden.', true);
+    const base=getDefaultTimerSeconds();
+    fields.forEach(f=>{ f.timer={remaining:base, running:false, startedAt:null, startedAtMs:null, endsAtMs:null}; markFieldChanged(f); });
+    renderGameFields(); renderFieldsSummary(); renderDisplayOverview(); refreshJoinedField(); updateTimerDisplays(); pushLiveFields();
+  };
+
+
   // ---------------- RULE CARD EDITOR ----------------
   function renderRuleEditor(){
     const c=$('rulesContainer'); if(!c) return;
@@ -671,7 +754,7 @@
       <div class="muted">${escapeHtml(r.why||'')}</div>
     </div>`).join('');
   }
-  function ruleTargetLabel(v){ return ({dominant:'spielprägende Person', low:'wenig eingebundene Person', team:'Teamregel', leading:'führendes Team', trailing:'zurückliegendes Team', all:'Zusatzchallenge'}[v]||v||''); }
+  function ruleTargetLabel(v){ return ({dominant:'Person war oft beteiligt', low:'Person kam wenig ins Spiel', team:'Teamregel', leading:'führendes Team', trailing:'zurückliegendes Team', all:'Zusatzchallenge'}[v]||v||''); }
   function problemLabel(v){ return ({any:'egal', solo:'Soloaktionen', passes:'Passspiel', pressure:'Druck', uneven:'unausgeglichen', rules:'Regelstreit', ok:'alle beteiligt'}[v]||v||''); }
   function sportLabel(v){ return ({general:'allgemein',floorball:'Floorball',football:'Fußball',basketball:'Basketball',handball:'Handball',ultimate:'Ultimate',all:'alle'}[v]||v); }
   window.setSportProfile=function(v){ currentSport=v||'general'; localStorage.setItem('fbph_current_sport', currentSport); saveLocal(); renderRuleEditor(); notify('Sportart-Profil gesetzt. Aktive Karten bleiben unverändert.'); };
@@ -832,11 +915,11 @@
     const hashParams = new URLSearchParams(hash);
     const code = searchParams.get('join') || searchParams.get('room') || hashParams.get('join') || hashParams.get('room');
     const view = searchParams.get('view') || hashParams.get('view');
-    if(view === 'player' || code) switchView('player');
+    if(view === 'display') { switchView('display'); } else if(view === 'player' || code) { switchView('player'); }
     if(!code) return;
     $('joinRoomCode').value=code.toUpperCase();
-    $('joinInfo').textContent='Raumcode erkannt. Verbinde...';
-    setTimeout(()=>{ joinLiveSession(); }, 250);
+    if($('joinInfo')) $('joinInfo').textContent='Raumcode erkannt. Verbinde...';
+    setTimeout(async()=>{ await joinLiveSession(); if(view==='display') switchView('display'); }, 250);
   }
 
   window.createLiveSession=async function(){
