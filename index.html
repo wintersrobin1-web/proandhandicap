@@ -24,6 +24,7 @@
     .teams{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.team{border:1px solid var(--border);border-radius:16px;overflow:hidden;background:#fff}.team-head{padding:8px 10px;background:var(--green-soft);border-bottom:1px solid #dcfce7;font-weight:800;color:#166534;display:flex;justify-content:space-between}.team ul{margin:0;padding:10px 16px}.team li{margin:5px 0}
     .field-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}.field{border:2px solid #dcfce7;border-radius:18px;background:#fff;overflow:hidden}.field-head{background:#f0fdf4;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #dcfce7}.score{font-size:34px;font-weight:900;text-align:center}.timer{font-variant-numeric:tabular-nums;font-size:26px;font-weight:900;color:#166534}.side{border:1px solid var(--border);border-radius:14px;padding:10px;background:#f8fafc}.side h4{margin:0 0 8px 0}.select-wide{width:100%}.recommend{margin-top:10px;border-radius:14px;padding:10px;background:#f8fafc;border:1px solid var(--border)}.recommend strong{display:block;margin-bottom:4px}.good{background:#ecfdf5;border-color:#bbf7d0}.warn{background:#fff7ed;border-color:#fed7aa}.danger{background:#fef2f2;border-color:#fecaca}.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:720px){.two{grid-template-columns:1fr}}
     .log{max-height:200px;overflow:auto;font-size:12px;background:#0f172a;color:#e2e8f0;border-radius:14px;padding:10px;white-space:pre-wrap}.notice{border-left:5px solid var(--green);background:#f8fafc;padding:10px;border-radius:12px;color:#334155;font-size:13px}.danger-text{color:#b91c1c}.ok-text{color:#15803d}.copy{user-select:all;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#f1f5f9;border:1px dashed #cbd5e1;padding:6px 8px;border-radius:10px}
+    .rule-list{display:grid;gap:10px}.rule-card{border:1px solid var(--border);border-radius:16px;background:#fff;padding:12px}.rule-card.inactive{opacity:.55}.rule-card textarea{min-height:54px}.badge{display:inline-block;border-radius:999px;padding:2px 7px;background:#e2e8f0;font-size:11px;font-weight:800}.badge.procap{background:#dcfce7;color:#166534}.badge.handicap{background:#ffedd5;color:#9a3412}.badge.team{background:#dbeafe;color:#1d4ed8}
   </style>
 </head>
 <body>
@@ -38,6 +39,7 @@
       <button class="tab active" id="tabTeacher" onclick="switchView('teacher')">Lehrkraft</button>
       <button class="tab" id="tabPlayer" onclick="switchView('player')">iPad beitreten</button>
       <button class="tab" id="tabGame" onclick="switchView('game')">Spielmodus</button>
+      <button class="tab" id="tabRules" onclick="switchView('rules')">Pro-/Handicaps</button>
     </div>
   </header>
 
@@ -79,13 +81,17 @@
 
       <div class="card">
         <h2>3. Live-Session optional</h2>
-        <div class="notice">Offline funktioniert ohne Internet. Live benötigt Firebase-Konfiguration und WLAN. Die App erstellt dann einen Raumcode, dem andere iPads beitreten.</div>
-        <h3>Firebase Config JSON</h3>
-        <textarea id="firebaseConfigInput" placeholder='Firebase-Web-App-Config einfügen – JSON oder const firebaseConfig = {...};'></textarea>
-        <div class="row" style="margin-top:8px">
-          <button class="blue" onclick="connectFirebase()">Firebase verbinden</button>
-          <button class="ghost" onclick="saveFirebaseConfig()">Config lokal merken</button>
-        </div>
+        <div class="notice">Offline funktioniert ohne Internet. Live nutzt dein fest eingebautes Firebase-Projekt. Andere iPads können per Raumcode beitreten.</div>
+        <details style="margin-top:8px">
+          <summary class="muted" style="cursor:pointer;font-weight:700">Erweiterte Firebase-Config anzeigen/ändern</summary>
+          <h3>Firebase Config</h3>
+          <textarea id="firebaseConfigInput" placeholder="Optional: andere Firebase-Web-App-Config einfügen"></textarea>
+          <div class="row" style="margin-top:8px">
+            <button class="blue" onclick="connectFirebase()">Firebase verbinden</button>
+            <button class="ghost" onclick="saveFirebaseConfig()">Config lokal merken</button>
+            <button class="ghost" onclick="resetFirebaseConfigToDefault()">Standard wiederherstellen</button>
+          </div>
+        </details>
         <h3>Raum</h3>
         <div class="row">
           <input id="roomCode" placeholder="Raumcode" style="flex:1" />
@@ -115,12 +121,17 @@
     <aside class="grid">
       <div class="card">
         <h2>iPad einer Live-Session beitreten</h2>
-        <h3>Firebase Config JSON</h3>
-        <textarea id="joinFirebaseConfigInput" placeholder='Gleiche Firebase Config wie bei der Lehrkraft – JSON oder const firebaseConfig = {...};'></textarea>
-        <div class="row" style="margin-top:8px">
-          <button class="blue" onclick="connectFirebase(true)">Firebase verbinden</button>
-          <button class="ghost" onclick="copyTeacherConfigToJoin()">Config von Lehrkraft übernehmen</button>
-        </div>
+        <div class="notice">Die Firebase-Verbindung ist voreingestellt. Normalerweise reicht: Raumcode eingeben → Beitreten → Kleinfeld wählen.</div>
+        <details style="margin-top:8px">
+          <summary class="muted" style="cursor:pointer;font-weight:700">Erweiterte Firebase-Config anzeigen/ändern</summary>
+          <h3>Firebase Config</h3>
+          <textarea id="joinFirebaseConfigInput" placeholder="Optional: andere Firebase-Web-App-Config einfügen"></textarea>
+          <div class="row" style="margin-top:8px">
+            <button class="blue" onclick="connectFirebase(true)">Firebase verbinden</button>
+            <button class="ghost" onclick="copyTeacherConfigToJoin()">Config von Lehrkraft übernehmen</button>
+            <button class="ghost" onclick="resetFirebaseConfigToDefault(true)">Standard wiederherstellen</button>
+          </div>
+        </details>
         <h3>Raumcode</h3>
         <div class="row">
           <input id="joinRoomCode" placeholder="z. B. TEAM-482" style="flex:1" />
@@ -140,8 +151,41 @@
 
   <section id="gameView" class="hidden card">
     <h2>Spielmodus</h2>
-    <div class="notice">Offline: Felder werden lokal gesteuert. Live: Änderungen werden in den Raum geschrieben, sodass die Lehrkraft sie sehen kann.</div>
+    <div class="notice">Offline: Die Lehrkraft kann direkt auf jedem Kleinfeld Timer starten, Spielstand ändern und spielprägende/wenig eingebundene SuS eintragen. Live: dieselbe Ansicht wird über den Raumcode synchronisiert.</div>
     <div id="gameFieldsContainer" class="field-grid" style="margin-top:12px"></div>
+  </section>
+
+  <section id="rulesView" class="hidden grid main">
+    <aside class="grid">
+      <div class="card">
+        <h2>Pro-/Handicap bearbeiten</h2>
+        <div class="notice">Hier kannst du Regelkarten anpassen. Die App wählt nach Spielstand, Beteiligung und Hauptproblem passende Karten aus. Platzhalter: <span class="copy">{name}</span> und <span class="copy">{team}</span>.</div>
+        <h3>Neue / ausgewählte Karte</h3>
+        <input type="hidden" id="ruleId" />
+        <label>Aktiv <input type="checkbox" id="ruleActive" checked></label>
+        <div class="two" style="margin-top:8px">
+          <label>Typ<br><select id="ruleType" style="width:100%"><option value="Handicap">Handicap</option><option value="Procap">Procap</option><option value="Teamregel">Teamregel</option><option value="Fairnessregel">Fairnessregel</option><option value="Ausgleichsregel">Ausgleichsregel</option></select></label>
+          <label>Wirkung/Stärke<br><select id="ruleStrength" style="width:100%"><option value="leicht">leicht</option><option value="mittel" selected>mittel</option><option value="stark">stark</option></select></label>
+        </div>
+        <div class="two" style="margin-top:8px">
+          <label>Auslöser/Ziel<br><select id="ruleTarget" style="width:100%"><option value="dominant">spielprägende Person</option><option value="low">wenig eingebundene Person</option><option value="team">Team / allgemeines Problem</option><option value="leading">führendes Team</option><option value="trailing">zurückliegendes Team</option><option value="all">immer möglich</option></select></label>
+          <label>Hauptproblem<br><select id="ruleProblem" style="width:100%"><option value="any">egal</option><option value="solo">zu viele Einzelaktionen</option><option value="passes">zu wenig Passspiel</option><option value="pressure">zu hoher Druck</option><option value="uneven">Spiel unausgeglichen</option><option value="rules">Regelstreit/Fairness</option><option value="ok">alle gut beteiligt</option></select></label>
+        </div>
+        <label>Titel<br><input id="ruleTitle" style="width:100%" placeholder="z. B. Spielmacher-Challenge"></label>
+        <label>Regeltext<br><textarea id="ruleText" placeholder="z. B. {name}: Du darfst Tore vorbereiten, aber nicht selbst abschließen."></textarea></label>
+        <label>Warum passt diese Karte?<br><textarea id="ruleWhy" placeholder="kurze didaktische Begründung für die Auswertung"></textarea></label>
+        <div class="row" style="margin-top:10px">
+          <button class="primary" onclick="saveRuleCard()">Karte speichern</button>
+          <button class="ghost" onclick="newRuleCard()">Neue Karte</button>
+          <button class="orange" onclick="resetRuleCards()">Standardkarten wiederherstellen</button>
+        </div>
+      </div>
+    </aside>
+    <main class="card">
+      <h2>Regelkarten-Pool</h2>
+      <div class="notice">Für den UB reicht ein kleiner, klarer Pool. Zu viele Karten machen die Auswertung unübersichtlich. Empfehlenswert: 2–3 Karten pro Problemtyp.</div>
+      <div id="rulesContainer" class="rule-list" style="margin-top:12px"></div>
+    </main>
   </section>
 </div>
 
@@ -150,19 +194,48 @@
   let students = [];
   let teams = [];
   let fields = [];
+  let ruleCards = [];
   let currentClassName = '';
   let timers = {};
   let firebaseReady = false;
   let app, auth, db, fb;
+  const DEFAULT_FIREBASE_CONFIG = {
+    apiKey: "AIzaSyAmYW2G8GZV1YwgsdRxL3klS-KJDIiX8Yw",
+    authDomain: "teamsport-generator.firebaseapp.com",
+    projectId: "teamsport-generator",
+    storageBucket: "teamsport-generator.firebasestorage.app",
+    messagingSenderId: "503531689489",
+    appId: "1:503531689489:web:c3216d494e5438cb3c03b0"
+  };
+  const DEFAULT_FIREBASE_CONFIG_TEXT = 'const firebaseConfig = ' + JSON.stringify(DEFAULT_FIREBASE_CONFIG, null, 2) + ';';
   let currentRoom = '';
   let liveUnsub = null;
   let teacherPin = localStorage.getItem('fbph_teacher_pin') || makeCode(6);
   localStorage.setItem('fbph_teacher_pin', teacherPin);
 
+  const DEFAULT_RULE_CARDS = [
+    {id:'h_dom_no_goal', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', title:'Spielmacher-Challenge', text:'{name}: Du darfst Tore vorbereiten, aber in der nächsten Runde nicht selbst abschließen.', why:'Lenkt Dominanz in Vorlagen und Zusammenspiel um.'},
+    {id:'h_dom_contacts', active:true, type:'Handicap', target:'dominant', problem:'solo', strength:'stark', title:'Kontaktlimit', text:'{name}: Maximal 3 Ballkontakte, dann musst du abspielen.', why:'Begrenzt lange Dribblings und macht frühzeitige Orientierung notwendig.'},
+    {id:'h_dom_direct', active:true, type:'Handicap', target:'dominant', problem:'passes', strength:'mittel', title:'Direktspiel-Auftrag', text:'{name}: Du darfst den Ball nur annehmen und direkt oder nach einem Kontakt weiterspielen.', why:'Erhöht das Passspiel und stärkt die Mitspieler:innen.'},
+    {id:'p_low_safe', active:true, type:'Procap', target:'low', problem:'any', strength:'mittel', title:'3-Sekunden-Schutz', text:'{name}: Nach deiner Ballannahme hast du 3 Sekunden Schutz vor direktem Angriff.', why:'Gibt Zeit für Ballkontrolle und Entscheidung.'},
+    {id:'p_low_zone', active:true, type:'Procap', target:'low', problem:'pressure', strength:'stark', title:'Schutzraum', text:'{name}: Wenn du in der markierten Passzone stehst, darfst du nicht direkt angegriffen werden.', why:'Schafft eine sichere Anspielstation und senkt den Druck.'},
+    {id:'p_low_bonus', active:true, type:'Procap', target:'low', problem:'solo', strength:'leicht', title:'Einbindungsbonus', text:'{team}: Ein Tor zählt doppelt, wenn {name} am Angriff beteiligt war.', why:'Macht Einbindung zum gemeinsamen Teamziel.'},
+    {id:'t_three_players', active:true, type:'Teamregel', target:'team', problem:'solo', strength:'stark', title:'Drei beteiligt', text:'{team}: Ein Tor zählt nur, wenn vorher mindestens 3 verschiedene Teammitglieder beteiligt waren.', why:'Reduziert Soloaktionen und erzwingt Beteiligung.'},
+    {id:'t_two_passes', active:true, type:'Teamregel', target:'team', problem:'passes', strength:'mittel', title:'Passpflicht', text:'{team}: Vor jedem Torabschluss müssen mindestens 2 Pässe gespielt werden.', why:'Macht Passspiel zum Spielziel.'},
+    {id:'t_pass_zone', active:true, type:'Procap', target:'team', problem:'pressure', strength:'mittel', title:'Procap-Zone', text:'In der markierten Passzone darf nicht direkt verteidigt werden.', why:'Schafft sichere Anspielstationen.'},
+    {id:'f_confirm', active:true, type:'Fairnessregel', target:'team', problem:'rules', strength:'mittel', title:'Gegner bestätigt', text:'Ein Punkt zählt nur, wenn das gegnerische Team die Zusatzregel bestätigt. Bei Streit: kein Punkt, direkt weiterspielen.', why:'Verringert Diskussionen und stärkt Regelverantwortung.'},
+    {id:'a_leading', active:true, type:'Ausgleichsregel', target:'leading', problem:'uneven', strength:'stark', title:'Führendes Team erschweren', text:'{team}: Ein Tor zählt nur nach 3 Pässen.', why:'Macht ein ungleiches Spiel spannender.'},
+    {id:'a_trailing', active:true, type:'Procap', target:'trailing', problem:'uneven', strength:'stark', title:'Zurückliegendes Team stärken', text:'{team}: Nach Ballgewinn habt ihr 3 Sekunden Schutz.', why:'Erleichtert Ballkontrolle und Anschlussaktionen.'},
+    {id:'c_ok', active:true, type:'Teamregel', target:'all', problem:'ok', strength:'leicht', title:'Nächste Challenge', text:'Tor zählt nur nach Seitenwechsel oder Pass aus der Außenzone.', why:'Wenn Beteiligung klappt, wird das Zusammenspiel taktisch anspruchsvoller.'}
+  ];
+
+  function cloneDefaultRules(){ return JSON.parse(JSON.stringify(DEFAULT_RULE_CARDS)).map(r=>({...r,id:r.id+'_'+makeId().slice(0,4)})); }
+
+
   const $ = (id) => document.getElementById(id);
-  const saveLocal = () => localStorage.setItem('fbph_state', JSON.stringify({students, teams, fields, currentClassName}));
+  const saveLocal = () => localStorage.setItem('fbph_state', JSON.stringify({students, teams, fields, ruleCards, currentClassName}));
   const loadLocal = () => {
-    try { const s = JSON.parse(localStorage.getItem('fbph_state') || '{}'); students=s.students||[]; teams=s.teams||[]; fields=s.fields||[]; currentClassName=s.currentClassName||''; } catch(e){}
+    try { const s = JSON.parse(localStorage.getItem('fbph_state') || '{}'); students=s.students||[]; teams=s.teams||[]; fields=s.fields||[]; ruleCards=s.ruleCards||JSON.parse(localStorage.getItem('fbph_rule_cards')||'null')||cloneDefaultRules(); currentClassName=s.currentClassName||''; } catch(e){}
   };
 
   function makeId(){ return Math.random().toString(36).slice(2,10); }
@@ -174,11 +247,12 @@
 
   // ---------------- VIEW ----------------
   window.switchView = function(view){
-    ['teacher','player','game'].forEach(v=>{
+    ['teacher','player','game','rules'].forEach(v=>{
       $(v+'View').classList.toggle('hidden', v!==view);
       $('tab'+v[0].toUpperCase()+v.slice(1)).classList.toggle('active', v===view);
     });
     if(view==='game') renderGameFields();
+    if(view==='rules') renderRuleEditor();
   };
 
   function updateModePill(){
@@ -252,9 +326,9 @@
   }
   function renderFieldsSummary(){
     if(!fields.length){ $('fieldsContainer').innerHTML='<div class="muted">Nach dem Erstellen erscheinen hier die Kleinfelder.</div>'; return; }
-    $('fieldsContainer').innerHTML='<div class="field-grid">'+fields.map(f=>fieldCardHtml(f,false)).join('')+'</div>';
+    $('fieldsContainer').innerHTML='<div class="field-grid">'+fields.map(f=>fieldCardHtml(f,true)).join('')+'</div>';
   }
-  function renderAll(){ renderStudents(); renderTeams(); renderFieldsSummary(); renderGameFields(); refreshClassSelect(); $('className').value=currentClassName; saveLocal(); }
+  function renderAll(){ renderStudents(); renderTeams(); renderFieldsSummary(); renderGameFields(); renderRuleEditor(); refreshClassSelect(); $('className').value=currentClassName; saveLocal(); }
 
   // ---------------- GAME UI ----------------
   function teamOptions(teamId){
@@ -310,47 +384,154 @@
     pushLiveField(f); renderGameFields(); renderFieldsSummary(); notify('Runde ausgewertet. Regelkarte testen!');
   };
   function studentName(id){ return students.find(s=>s.id===id)?.name || teams.flatMap(t=>t.students).find(s=>s.id===id)?.name || 'Person'; }
+  function applyTemplate(txt, ctx){
+    return String(txt||'').replaceAll('{name}', ctx.name||'Person').replaceAll('{team}', ctx.team||'Team').replaceAll('{otherTeam}', ctx.otherTeam||'Gegnerteam');
+  }
+  function strengthScore(str){ return {leicht:1, mittel:2, stark:3}[str] || 2; }
+  function pickRule({target, problem, desired='mittel', exclude=[]}){
+    const desiredVal=strengthScore(desired);
+    const candidates=(ruleCards||[]).filter(r=>r.active!==false && r.target===target && (r.problem===problem || r.problem==='any' || problem==='any') && !exclude.includes(r.id));
+    if(!candidates.length) return null;
+    candidates.sort((a,b)=>Math.abs(strengthScore(a.strength)-desiredVal)-Math.abs(strengthScore(b.strength)-desiredVal));
+    return candidates[0];
+  }
+  function addRuleRecommendation(rec, rule, ctx){
+    if(!rule) return false;
+    rec.push({type:`${rule.type} · ${rule.title || rule.strength}`, text:applyTemplate(rule.text, ctx), why:applyTemplate(rule.why, ctx), cardId:rule.id, strength:rule.strength});
+    return true;
+  }
   function makeRecommendations(f,obs){
-    const rec=[]; const diff=(obs.scoreA||0)-(obs.scoreB||0);
-    const add=(type,text,why)=>rec.push({type,text,why});
-    const doms=[obs.domA,obs.domB].filter(Boolean), lows=[obs.lowA,obs.lowB].filter(Boolean);
-    doms.forEach(id=> add('Handicap / Spielmacher-Challenge', `${studentName(id)}: Du darfst Tore vorbereiten, aber in der nächsten Runde nicht selbst abschließen.`, 'Lenkt Dominanz in Vorlagen und Zusammenspiel um.'));
-    lows.forEach(id=> add('Procap / Einbindungshilfe', `${studentName(id)}: Nach deiner Ballannahme hast du 3 Sekunden Schutz vor direktem Angriff.`, 'Gibt Zeit für Ballkontrolle und Entscheidung.'));
-    if(obs.problem==='solo') add('Teamregel', 'Tor zählt nur, wenn vorher mindestens 3 verschiedene Teammitglieder beteiligt waren.', 'Reduziert Soloaktionen und erzwingt Einbindung.');
-    if(obs.problem==='passes') add('Teamregel', 'Vor jedem Torabschluss müssen mindestens 2 Pässe gespielt werden.', 'Macht Passspiel zum Spielziel.');
-    if(obs.problem==='pressure') add('Procap-Zone', 'In der markierten Passzone darf nicht direkt verteidigt werden.', 'Schafft sichere Anspielstationen.');
-    if(obs.problem==='rules') add('Fairnessregel', 'Ein Punkt zählt nur, wenn das gegnerische Team die Zusatzregel bestätigt. Bei Streit: kein Punkt, direkt weiterspielen.', 'Verringert Diskussionen und stärkt Regelverantwortung.');
-    if(Math.abs(diff)>=3) add('Ausgleichsregel', 'Führendes Team: Tor zählt nur nach 3 Pässen. Zurückliegendes Team: 3-Sekunden-Schutz nach Ballgewinn.', 'Macht ein ungleiches Spiel spannender.');
-    if(obs.problem==='ok' && rec.length===0) add('Nächste Challenge', 'Tor zählt nur nach Seitenwechsel oder Pass aus der Außenzone.', 'Wenn Beteiligung klappt, wird das Zusammenspiel taktisch anspruchsvoller.');
-    if(rec.length===0) add('Teamregel', 'Ein Tor zählt nur, wenn mindestens 3 verschiedene Teammitglieder beteiligt waren.', 'Standardregel für mehr Miteinander.');
+    const rec=[]; const used=[]; const diff=(obs.scoreA||0)-(obs.scoreB||0);
+    const problem=obs.problem||'solo';
+    const intensity=(Math.abs(diff)>=3 || problem==='uneven') ? 'stark' : 'mittel';
+    const teamA=getTeam(f.teamA)?.name||'Team A', teamB=getTeam(f.teamB)?.name||'Team B';
+    const addPick=(target, prob, ctx, desired=intensity)=>{ const r=pickRule({target, problem:prob, desired, exclude:used}); if(r){ used.push(r.id); return addRuleRecommendation(rec,r,ctx); } return false; };
+
+    [{id:obs.domA, team:teamA, otherTeam:teamB}, {id:obs.domB, team:teamB, otherTeam:teamA}].filter(x=>x.id).forEach(x=>{
+      addPick('dominant', problem, {name:studentName(x.id), team:x.team, otherTeam:x.otherTeam}, problem==='solo'?'stark':'mittel');
+    });
+    [{id:obs.lowA, team:teamA, otherTeam:teamB}, {id:obs.lowB, team:teamB, otherTeam:teamA}].filter(x=>x.id).forEach(x=>{
+      addPick('low', problem, {name:studentName(x.id), team:x.team, otherTeam:x.otherTeam}, problem==='pressure'?'stark':'mittel');
+    });
+
+    if(problem && problem!=='ok') {
+      addPick('team', problem, {team:'Beide Teams', otherTeam:'Gegnerteam'}, intensity);
+    }
+    if(Math.abs(diff)>=3){
+      if(diff>0){
+        addPick('leading','uneven',{team:teamA,otherTeam:teamB},'stark');
+        addPick('trailing','uneven',{team:teamB,otherTeam:teamA},'stark');
+      } else {
+        addPick('leading','uneven',{team:teamB,otherTeam:teamA},'stark');
+        addPick('trailing','uneven',{team:teamA,otherTeam:teamB},'stark');
+      }
+    }
+    if(problem==='ok') addPick('all','ok',{team:'Beide Teams'},'leicht');
+    if(rec.length===0) addPick('team','solo',{team:'Beide Teams'},'mittel');
+    if(rec.length===0) rec.push({type:'Teamregel · Standard', text:'Ein Tor zählt nur, wenn mindestens 3 verschiedene Teammitglieder beteiligt waren.', why:'Standardregel für mehr Miteinander.', strength:'mittel'});
     return rec.slice(0,4);
   }
+  
   function recommendationsHtml(f){
     if(!f.recommendations?.length) return '<div class="recommend"><strong>Noch keine Regelkarte</strong><span class="muted">Nach der Runde auswerten.</span></div>';
-    return f.recommendations.map(r=>`<div class="recommend ${r.type.includes('Procap')?'good':r.type.includes('Handicap')?'warn':''}"><strong>${escapeHtml(r.type)}</strong><div>${escapeHtml(r.text)}</div><div class="muted">${escapeHtml(r.why)}</div></div>`).join('');
+    return f.recommendations.map(r=>`<div class="recommend ${r.type.includes('Procap')?'good':(r.type.includes('Handicap')||r.type.includes('Ausgleich'))?'warn':r.type.includes('Fairness')?'danger':''}"><strong>${escapeHtml(r.type)}</strong><div>${escapeHtml(r.text)}</div><div class="muted">${escapeHtml(r.why)}</div></div>`).join('');
   }
 
+
+  // ---------------- RULE CARD EDITOR ----------------
+  function renderRuleEditor(){
+    const c=$('rulesContainer'); if(!c) return;
+    if(!ruleCards?.length) ruleCards=cloneDefaultRules();
+    c.innerHTML = ruleCards.map(r=>`<div class="rule-card ${r.active===false?'inactive':''}">
+      <div class="row" style="justify-content:space-between">
+        <div><span class="badge ${r.type==='Procap'?'procap':r.type==='Handicap'?'handicap':'team'}">${escapeHtml(r.type)}</span> <strong>${escapeHtml(r.title||'Ohne Titel')}</strong></div>
+        <div class="row"><button class="small" onclick="editRuleCard('${r.id}')">Bearbeiten</button><button class="small red" onclick="deleteRuleCard('${r.id}')">Löschen</button></div>
+      </div>
+      <div class="muted" style="margin:4px 0">Ziel: ${escapeHtml(ruleTargetLabel(r.target))} · Problem: ${escapeHtml(problemLabel(r.problem))} · Wirkung: ${escapeHtml(r.strength||'mittel')} · ${r.active===false?'inaktiv':'aktiv'}</div>
+      <div>${escapeHtml(r.text)}</div>
+      <div class="muted">${escapeHtml(r.why||'')}</div>
+    </div>`).join('');
+  }
+  function ruleTargetLabel(v){ return ({dominant:'spielprägende Person', low:'wenig eingebundene Person', team:'Team/allgemeines Problem', leading:'führendes Team', trailing:'zurückliegendes Team', all:'immer möglich'}[v]||v||''); }
+  function problemLabel(v){ return ({any:'egal', solo:'Soloaktionen', passes:'Passspiel', pressure:'Druck', uneven:'unausgeglichen', rules:'Regelstreit', ok:'alle beteiligt'}[v]||v||''); }
+  window.newRuleCard=function(){
+    $('ruleId').value=''; $('ruleActive').checked=true; $('ruleType').value='Handicap'; $('ruleStrength').value='mittel'; $('ruleTarget').value='dominant'; $('ruleProblem').value='any'; $('ruleTitle').value=''; $('ruleText').value=''; $('ruleWhy').value='';
+  };
+  window.editRuleCard=function(id){
+    const r=ruleCards.find(x=>x.id===id); if(!r) return;
+    $('ruleId').value=r.id; $('ruleActive').checked=r.active!==false; $('ruleType').value=r.type||'Teamregel'; $('ruleStrength').value=r.strength||'mittel'; $('ruleTarget').value=r.target||'team'; $('ruleProblem').value=r.problem||'any'; $('ruleTitle').value=r.title||''; $('ruleText').value=r.text||''; $('ruleWhy').value=r.why||'';
+    switchView('rules');
+  };
+  window.saveRuleCard=function(){
+    const r={id:$('ruleId').value||makeId(), active:$('ruleActive').checked, type:$('ruleType').value, strength:$('ruleStrength').value, target:$('ruleTarget').value, problem:$('ruleProblem').value, title:$('ruleTitle').value.trim()||'Regelkarte', text:$('ruleText').value.trim(), why:$('ruleWhy').value.trim()};
+    if(!r.text) return notify('Bitte Regeltext eintragen.', true);
+    const idx=ruleCards.findIndex(x=>x.id===r.id); if(idx>=0) ruleCards[idx]=r; else ruleCards.push(r);
+    localStorage.setItem('fbph_rule_cards', JSON.stringify(ruleCards)); saveLocal(); renderRuleEditor(); newRuleCard(); notify('Regelkarte gespeichert.');
+    pushLiveRules();
+  };
+  window.deleteRuleCard=function(id){
+    ruleCards=ruleCards.filter(r=>r.id!==id); localStorage.setItem('fbph_rule_cards', JSON.stringify(ruleCards)); saveLocal(); renderRuleEditor(); notify('Regelkarte gelöscht.'); pushLiveRules();
+  };
+  window.resetRuleCards=function(){
+    if(!confirm('Standardkarten wiederherstellen? Eigene Regelkarten werden ersetzt.')) return;
+    ruleCards=cloneDefaultRules(); localStorage.setItem('fbph_rule_cards', JSON.stringify(ruleCards)); saveLocal(); renderRuleEditor(); newRuleCard(); notify('Standardkarten wiederhergestellt.'); pushLiveRules();
+  };
+
   // ---------------- FIREBASE LIVE ----------------
+  function getPreferredFirebaseConfigText(join=false){
+    const fieldId = join ? 'joinFirebaseConfigInput' : 'firebaseConfigInput';
+    return ($(fieldId)?.value || localStorage.getItem('fbph_firebase_config') || DEFAULT_FIREBASE_CONFIG_TEXT || '').trim();
+  }
   window.saveFirebaseConfig=function(){ const v=$('firebaseConfigInput').value.trim(); if(v){ localStorage.setItem('fbph_firebase_config',v); notify('Firebase Config lokal im Browser gespeichert.'); } };
-  window.copyTeacherConfigToJoin=function(){ $('joinFirebaseConfigInput').value=$('firebaseConfigInput').value || localStorage.getItem('fbph_firebase_config') || ''; };
+  window.copyTeacherConfigToJoin=function(){ $('joinFirebaseConfigInput').value=$('firebaseConfigInput').value || localStorage.getItem('fbph_firebase_config') || DEFAULT_FIREBASE_CONFIG_TEXT; };
+  window.resetFirebaseConfigToDefault=function(join=false){ const id=join?'joinFirebaseConfigInput':'firebaseConfigInput'; $(id).value=DEFAULT_FIREBASE_CONFIG_TEXT; localStorage.setItem('fbph_firebase_config', DEFAULT_FIREBASE_CONFIG_TEXT); notify('Standard-Firebase-Config eingesetzt.'); };
   function parseFirebaseConfig(configText){
     let txt = (configText || '').trim();
     if(!txt) throw new Error('empty');
-    // Firebase zeigt die Web-App-Config oft als JavaScript an:
+
+    function extractBalancedObject(str, startIndex){
+      const start = str.indexOf('{', startIndex);
+      if(start === -1) throw new Error('no-object');
+      let depth = 0, inString = false, quote = '', escape = false;
+      for(let i=start; i<str.length; i++){
+        const ch = str[i];
+        if(inString){
+          if(escape){ escape = false; continue; }
+          if(ch === '\\'){ escape = true; continue; }
+          if(ch === quote){ inString = false; quote = ''; }
+          continue;
+        }
+        if(ch === '"' || ch === "'" || ch === '`') { inString = true; quote = ch; continue; }
+        if(ch === '{') depth++;
+        if(ch === '}'){
+          depth--;
+          if(depth === 0) return str.slice(start, i + 1);
+        }
+      }
+      throw new Error('unclosed-object');
+    }
+
+    // Akzeptiert vollständige Firebase-Snippets mit import-Zeilen, z. B.:
     // const firebaseConfig = { ... };
-    // Diese Funktion akzeptiert sowohl reines JSON als auch diesen Firebase-Snippet.
-    txt = txt.replace(/^\s*(?:const|let|var)\s+firebaseConfig\s*=\s*/m, '').trim();
+    const firebaseConfigMatch = txt.match(/(?:const|let|var)\s+firebaseConfig\s*=/);
+    if(firebaseConfigMatch){
+      txt = extractBalancedObject(txt, firebaseConfigMatch.index + firebaseConfigMatch[0].length);
+    } else {
+      // Akzeptiert auch direkt eingefügte reine { ... }-Objekte.
+      txt = extractBalancedObject(txt, 0);
+    }
+
     txt = txt.replace(/;\s*$/,'').trim();
-    const start = txt.indexOf('{');
-    const end = txt.lastIndexOf('}');
-    if(start !== -1 && end !== -1) txt = txt.slice(start, end + 1);
     try { return JSON.parse(txt); } catch(e) {}
+
     // JS-Objekt in JSON umwandeln: unquoted keys quoten, einfache Quotes ersetzen, trailing commas entfernen.
     const jsonLike = txt
       .replace(/([,{]\s*)([A-Za-z_$][\w$]*)\s*:/g, '$1"$2":')
       .replace(/'/g, '"')
       .replace(/,\s*([}\]])/g, '$1');
-    return JSON.parse(jsonLike);
+    const parsed = JSON.parse(jsonLike);
+    if(!parsed.apiKey || !parsed.projectId) throw new Error('missing-required-firebase-fields');
+    return parsed;
   }
 
   async function initFirebaseFromConfig(configText){
@@ -363,16 +544,16 @@
     fb={doc,setDoc,getDoc,updateDoc,deleteDoc,onSnapshot,serverTimestamp}; firebaseReady=true; notify('Firebase verbunden.'); return true;
   }
   window.connectFirebase=async function(join=false){
-    const txt = join ? ($('joinFirebaseConfigInput').value || localStorage.getItem('fbph_firebase_config') || '') : ($('firebaseConfigInput').value || localStorage.getItem('fbph_firebase_config') || '');
+    const txt = getPreferredFirebaseConfigText(join);
     if(!txt) return notify('Bitte Firebase Config einfügen.', true);
     if(!join) $('firebaseConfigInput').value=txt; else $('joinFirebaseConfigInput').value=txt;
     await initFirebaseFromConfig(txt);
   };
   window.createLiveSession=async function(){
-    if(!firebaseReady){ const ok=await initFirebaseFromConfig($('firebaseConfigInput').value||localStorage.getItem('fbph_firebase_config')||''); if(!ok) return; }
+    if(!firebaseReady){ const ok=await initFirebaseFromConfig(getPreferredFirebaseConfigText(false)); if(!ok) return; }
     if(!teams.length || !fields.length) return notify('Erst Teams/Felder erstellen.', true);
     currentRoom = ($('roomCode').value.trim().toUpperCase() || `TEAM-${makeCode(3)}`).replace(/\s+/g,'-'); $('roomCode').value=currentRoom;
-    const session={roomCode:currentRoom, className:currentClassName||$('className').value||'Klasse', teacherPin, createdAt:nowIso(), updatedAt:nowIso(), expiresAt:new Date(Date.now()+4*60*60*1000).toISOString(), students, teams, fields, settings:{roundMinutes:parseInt($('roundMinutes').value)||4, fieldCount:parseInt($('fieldCount').value)||3}};
+    const session={roomCode:currentRoom, className:currentClassName||$('className').value||'Klasse', teacherPin, createdAt:nowIso(), updatedAt:nowIso(), expiresAt:new Date(Date.now()+4*60*60*1000).toISOString(), students, teams, fields, ruleCards, settings:{roundMinutes:parseInt($('roundMinutes').value)||4, fieldCount:parseInt($('fieldCount').value)||3}};
     await fb.setDoc(fb.doc(db,'teamsportSessions',currentRoom), session);
     subscribeRoom(currentRoom); updateModePill(); $('roomInfo').innerHTML=`Raumcode: <span class="copy">${currentRoom}</span> · PIN lokal: <span class="copy">${teacherPin}</span> · Ablauf: ${new Date(session.expiresAt).toLocaleTimeString('de-DE')}`; notify('Live-Session erstellt.');
   };
@@ -380,13 +561,18 @@
     if(liveUnsub) liveUnsub();
     liveUnsub = fb.onSnapshot(fb.doc(db,'teamsportSessions',code),(snap)=>{
       if(!snap.exists()) { notify('Live-Session wurde gelöscht.', true); currentRoom=''; updateModePill(); return; }
-      const d=snap.data(); students=d.students||students; teams=d.teams||teams; fields=d.fields||fields; currentClassName=d.className||currentClassName; renderAll(); updateModePill();
+      const d=snap.data(); students=d.students||students; teams=d.teams||teams; fields=d.fields||fields; ruleCards=d.ruleCards||ruleCards; currentClassName=d.className||currentClassName; renderAll(); updateModePill();
     });
   }
   async function pushLiveField(f){
     saveLocal();
     if(!currentRoom || !firebaseReady) return;
     try{ await fb.updateDoc(fb.doc(db,'teamsportSessions',currentRoom), {fields, updatedAt:nowIso()}); }catch(e){ console.warn(e); }
+  }
+  async function pushLiveRules(){
+    saveLocal();
+    if(!currentRoom || !firebaseReady) return;
+    try{ await fb.updateDoc(fb.doc(db,'teamsportSessions',currentRoom), {ruleCards, updatedAt:nowIso()}); }catch(e){ console.warn(e); }
   }
   window.deleteLiveSession=async function(){
     if(!currentRoom || !firebaseReady) return notify('Keine Live-Session aktiv.', true);
@@ -399,10 +585,10 @@
     renderAll(); notify('Rundendaten gelöscht. Teams bleiben erhalten.');
   };
   window.joinLiveSession=async function(){
-    if(!firebaseReady){ const ok=await initFirebaseFromConfig($('joinFirebaseConfigInput').value||localStorage.getItem('fbph_firebase_config')||''); if(!ok) return; }
+    if(!firebaseReady){ const ok=await initFirebaseFromConfig(getPreferredFirebaseConfigText(true)); if(!ok) return; }
     const code=$('joinRoomCode').value.trim().toUpperCase(); if(!code) return notify('Raumcode eingeben.', true);
     const snap=await fb.getDoc(fb.doc(db,'teamsportSessions',code)); if(!snap.exists()) return notify('Raum nicht gefunden.', true);
-    currentRoom=code; const d=snap.data(); students=d.students||[]; teams=d.teams||[]; fields=d.fields||[]; if(d.settings?.roundMinutes) $('roundMinutes').value=d.settings.roundMinutes;
+    currentRoom=code; const d=snap.data(); students=d.students||[]; teams=d.teams||[]; fields=d.fields||[]; ruleCards=d.ruleCards||ruleCards; if(d.settings?.roundMinutes) $('roundMinutes').value=d.settings.roundMinutes;
     subscribeRoom(code); updateJoinFieldSelect(); updateModePill(); $('joinInfo').textContent=`Beigetreten: ${code}. Wähle dein Kleinfeld.`; notify('Live-Session beigetreten.');
   };
   function updateJoinFieldSelect(){ $('joinFieldSelect').innerHTML=fields.map(f=>`<option value="${f.id}">${escapeHtml(f.name)}: ${escapeHtml(getTeam(f.teamA)?.name||'A')} vs. ${escapeHtml(getTeam(f.teamB)?.name||'B')}</option>`).join(''); }
@@ -413,7 +599,7 @@
   function escapeAttr(s){ return escapeHtml(s).replace(/`/g,'&#96;'); }
 
   // Init
-  loadLocal(); refreshClassSelect(); $('firebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||''; $('joinFirebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||''; renderAll(); updateModePill(); updateJoinFieldSelect();
+  loadLocal(); if(!ruleCards || !ruleCards.length) ruleCards=cloneDefaultRules(); refreshClassSelect(); $('firebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; $('joinFirebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; renderAll(); updateModePill(); updateJoinFieldSelect();
 
   // Make some functions global for inline handlers in module context
   Object.assign(window,{pauseTimer});
