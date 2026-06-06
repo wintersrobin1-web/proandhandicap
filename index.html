@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Floorball Procap/Handicap – Offline & Live</title>
+  <title>Teamsport Pro- und Handicap Generator – Offline & Live</title>
   <style>
     :root{
       --green:#16a34a; --green-dark:#15803d; --green-soft:#ecfdf5;
@@ -30,7 +30,7 @@
 <div class="app">
   <header>
     <div>
-      <h1>🏑 Floorball Procap/Handicap</h1>
+      <h1>🏑 Teamsport Pro- und Handicap Generator</h1>
       <div class="muted">Offline nutzbar · optional Live-Session mit Raumcode · keine Rundendaten dauerhaft im Offline-Modus</div>
     </div>
     <div class="row">
@@ -81,7 +81,7 @@
         <h2>3. Live-Session optional</h2>
         <div class="notice">Offline funktioniert ohne Internet. Live benötigt Firebase-Konfiguration und WLAN. Die App erstellt dann einen Raumcode, dem andere iPads beitreten.</div>
         <h3>Firebase Config JSON</h3>
-        <textarea id="firebaseConfigInput" placeholder='{"apiKey":"...","authDomain":"...","projectId":"...",...}'></textarea>
+        <textarea id="firebaseConfigInput" placeholder='Firebase-Web-App-Config einfügen – JSON oder const firebaseConfig = {...};'></textarea>
         <div class="row" style="margin-top:8px">
           <button class="blue" onclick="connectFirebase()">Firebase verbinden</button>
           <button class="ghost" onclick="saveFirebaseConfig()">Config lokal merken</button>
@@ -116,14 +116,14 @@
       <div class="card">
         <h2>iPad einer Live-Session beitreten</h2>
         <h3>Firebase Config JSON</h3>
-        <textarea id="joinFirebaseConfigInput" placeholder='Gleiche Firebase Config wie bei der Lehrkraft'></textarea>
+        <textarea id="joinFirebaseConfigInput" placeholder='Gleiche Firebase Config wie bei der Lehrkraft – JSON oder const firebaseConfig = {...};'></textarea>
         <div class="row" style="margin-top:8px">
           <button class="blue" onclick="connectFirebase(true)">Firebase verbinden</button>
           <button class="ghost" onclick="copyTeacherConfigToJoin()">Config von Lehrkraft übernehmen</button>
         </div>
         <h3>Raumcode</h3>
         <div class="row">
-          <input id="joinRoomCode" placeholder="z. B. FLOOR-482" style="flex:1" />
+          <input id="joinRoomCode" placeholder="z. B. TEAM-482" style="flex:1" />
           <button class="blue" onclick="joinLiveSession()">Beitreten</button>
         </div>
         <h3>Kleinfeld wählen</h3>
@@ -333,9 +333,29 @@
   // ---------------- FIREBASE LIVE ----------------
   window.saveFirebaseConfig=function(){ const v=$('firebaseConfigInput').value.trim(); if(v){ localStorage.setItem('fbph_firebase_config',v); notify('Firebase Config lokal im Browser gespeichert.'); } };
   window.copyTeacherConfigToJoin=function(){ $('joinFirebaseConfigInput').value=$('firebaseConfigInput').value || localStorage.getItem('fbph_firebase_config') || ''; };
+  function parseFirebaseConfig(configText){
+    let txt = (configText || '').trim();
+    if(!txt) throw new Error('empty');
+    // Firebase zeigt die Web-App-Config oft als JavaScript an:
+    // const firebaseConfig = { ... };
+    // Diese Funktion akzeptiert sowohl reines JSON als auch diesen Firebase-Snippet.
+    txt = txt.replace(/^\s*(?:const|let|var)\s+firebaseConfig\s*=\s*/m, '').trim();
+    txt = txt.replace(/;\s*$/,'').trim();
+    const start = txt.indexOf('{');
+    const end = txt.lastIndexOf('}');
+    if(start !== -1 && end !== -1) txt = txt.slice(start, end + 1);
+    try { return JSON.parse(txt); } catch(e) {}
+    // JS-Objekt in JSON umwandeln: unquoted keys quoten, einfache Quotes ersetzen, trailing commas entfernen.
+    const jsonLike = txt
+      .replace(/([,{]\s*)([A-Za-z_$][\w$]*)\s*:/g, '$1"$2":')
+      .replace(/'/g, '"')
+      .replace(/,\s*([}\]])/g, '$1');
+    return JSON.parse(jsonLike);
+  }
+
   async function initFirebaseFromConfig(configText){
     if(firebaseReady) return true;
-    let config; try{ config=JSON.parse(configText); }catch(e){ notify('Firebase Config ist kein gültiges JSON.', true); return false; }
+    let config; try{ config=parseFirebaseConfig(configText); }catch(e){ notify('Firebase Config konnte nicht gelesen werden. Füge entweder das reine {...}-Objekt oder den Firebase-Snippet mit const firebaseConfig = {...}; ein.', true); return false; }
     const { initializeApp } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js');
     const { getAuth, signInAnonymously } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
     const { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
@@ -351,14 +371,14 @@
   window.createLiveSession=async function(){
     if(!firebaseReady){ const ok=await initFirebaseFromConfig($('firebaseConfigInput').value||localStorage.getItem('fbph_firebase_config')||''); if(!ok) return; }
     if(!teams.length || !fields.length) return notify('Erst Teams/Felder erstellen.', true);
-    currentRoom = ($('roomCode').value.trim().toUpperCase() || `FLOOR-${makeCode(3)}`).replace(/\s+/g,'-'); $('roomCode').value=currentRoom;
+    currentRoom = ($('roomCode').value.trim().toUpperCase() || `TEAM-${makeCode(3)}`).replace(/\s+/g,'-'); $('roomCode').value=currentRoom;
     const session={roomCode:currentRoom, className:currentClassName||$('className').value||'Klasse', teacherPin, createdAt:nowIso(), updatedAt:nowIso(), expiresAt:new Date(Date.now()+4*60*60*1000).toISOString(), students, teams, fields, settings:{roundMinutes:parseInt($('roundMinutes').value)||4, fieldCount:parseInt($('fieldCount').value)||3}};
-    await fb.setDoc(fb.doc(db,'floorballSessions',currentRoom), session);
+    await fb.setDoc(fb.doc(db,'teamsportSessions',currentRoom), session);
     subscribeRoom(currentRoom); updateModePill(); $('roomInfo').innerHTML=`Raumcode: <span class="copy">${currentRoom}</span> · PIN lokal: <span class="copy">${teacherPin}</span> · Ablauf: ${new Date(session.expiresAt).toLocaleTimeString('de-DE')}`; notify('Live-Session erstellt.');
   };
   function subscribeRoom(code){
     if(liveUnsub) liveUnsub();
-    liveUnsub = fb.onSnapshot(fb.doc(db,'floorballSessions',code),(snap)=>{
+    liveUnsub = fb.onSnapshot(fb.doc(db,'teamsportSessions',code),(snap)=>{
       if(!snap.exists()) { notify('Live-Session wurde gelöscht.', true); currentRoom=''; updateModePill(); return; }
       const d=snap.data(); students=d.students||students; teams=d.teams||teams; fields=d.fields||fields; currentClassName=d.className||currentClassName; renderAll(); updateModePill();
     });
@@ -366,22 +386,22 @@
   async function pushLiveField(f){
     saveLocal();
     if(!currentRoom || !firebaseReady) return;
-    try{ await fb.updateDoc(fb.doc(db,'floorballSessions',currentRoom), {fields, updatedAt:nowIso()}); }catch(e){ console.warn(e); }
+    try{ await fb.updateDoc(fb.doc(db,'teamsportSessions',currentRoom), {fields, updatedAt:nowIso()}); }catch(e){ console.warn(e); }
   }
   window.deleteLiveSession=async function(){
     if(!currentRoom || !firebaseReady) return notify('Keine Live-Session aktiv.', true);
     if(!confirm(`Session ${currentRoom} wirklich komplett löschen?`)) return;
-    await fb.deleteDoc(fb.doc(db,'floorballSessions',currentRoom)); currentRoom=''; updateModePill(); $('roomInfo').textContent='Session gelöscht.'; notify('Live-Session gelöscht.');
+    await fb.deleteDoc(fb.doc(db,'teamsportSessions',currentRoom)); currentRoom=''; updateModePill(); $('roomInfo').textContent='Session gelöscht.'; notify('Live-Session gelöscht.');
   };
   window.clearRoundData=async function(){
     fields=fields.map(f=>({...f, scoreA:0, scoreB:0, round:1, recommendations:[], lastObservation:null}));
-    if(currentRoom && firebaseReady) await fb.updateDoc(fb.doc(db,'floorballSessions',currentRoom), {fields, updatedAt:nowIso()});
+    if(currentRoom && firebaseReady) await fb.updateDoc(fb.doc(db,'teamsportSessions',currentRoom), {fields, updatedAt:nowIso()});
     renderAll(); notify('Rundendaten gelöscht. Teams bleiben erhalten.');
   };
   window.joinLiveSession=async function(){
     if(!firebaseReady){ const ok=await initFirebaseFromConfig($('joinFirebaseConfigInput').value||localStorage.getItem('fbph_firebase_config')||''); if(!ok) return; }
     const code=$('joinRoomCode').value.trim().toUpperCase(); if(!code) return notify('Raumcode eingeben.', true);
-    const snap=await fb.getDoc(fb.doc(db,'floorballSessions',code)); if(!snap.exists()) return notify('Raum nicht gefunden.', true);
+    const snap=await fb.getDoc(fb.doc(db,'teamsportSessions',code)); if(!snap.exists()) return notify('Raum nicht gefunden.', true);
     currentRoom=code; const d=snap.data(); students=d.students||[]; teams=d.teams||[]; fields=d.fields||[]; if(d.settings?.roundMinutes) $('roundMinutes').value=d.settings.roundMinutes;
     subscribeRoom(code); updateJoinFieldSelect(); updateModePill(); $('joinInfo').textContent=`Beigetreten: ${code}. Wähle dein Kleinfeld.`; notify('Live-Session beigetreten.');
   };
