@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Floorball Procap/Handicap – Offline & Live</title>
+  <style>
+    :root{
+      --green:#16a34a; --green-dark:#15803d; --green-soft:#ecfdf5;
+      --blue:#2563eb; --blue-soft:#eff6ff; --red:#dc2626; --red-soft:#fef2f2;
+      --orange:#ea580c; --orange-soft:#fff7ed; --gray:#475569; --light:#f8fafc;
+      --border:#e2e8f0; --shadow:0 10px 30px rgba(2,6,23,.08);
+    }
+    *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f0fdf4;color:#0f172a}
+    .app{max-width:1400px;margin:0 auto;padding:16px;min-height:100vh;display:flex;flex-direction:column;gap:14px}
+    header{background:white;border:1px solid #dcfce7;border-radius:18px;padding:14px 18px;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    h1{font-size:22px;margin:0;color:#166534;display:flex;gap:8px;align-items:center}.muted{color:#64748b;font-size:12px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.grid{display:grid;gap:14px}.main{grid-template-columns:360px 1fr}@media(max-width:1000px){.main{grid-template-columns:1fr}}
+    .card{background:white;border:1px solid var(--border);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
+    .card h2{margin:0 0 12px 0;font-size:16px}.card h3{margin:12px 0 8px 0;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#64748b}
+    input,textarea,select{border:1px solid var(--border);border-radius:12px;padding:9px 10px;font:inherit;font-size:13px;background:white;outline:none}textarea{width:100%;min-height:72px;resize:vertical}input:focus,textarea:focus,select:focus{border-color:#22c55e;box-shadow:0 0 0 3px #dcfce7}
+    button{border:0;border-radius:12px;padding:9px 12px;font-weight:700;cursor:pointer;background:#e2e8f0;color:#0f172a}button:hover{filter:brightness(.97)}button:active{transform:translateY(1px)}button.primary{background:var(--green);color:white}button.blue{background:var(--blue);color:white}button.red{background:var(--red);color:white}button.orange{background:var(--orange);color:white}button.ghost{background:#f1f5f9;color:#334155}button.small{padding:6px 8px;font-size:12px}button.full{width:100%}button:disabled{opacity:.45;cursor:not-allowed}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap}.tab{background:#f1f5f9}.tab.active{background:#166534;color:white}.hidden{display:none!important}.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:#f1f5f9;font-size:12px;font-weight:700}.pill.live{background:#fee2e2;color:#991b1b}.pill.offline{background:#dcfce7;color:#166534}
+    .students{max-height:240px;overflow:auto;display:flex;flex-direction:column;gap:6px}.student{display:flex;align-items:center;justify-content:space-between;gap:6px;border:1px solid var(--border);border-radius:12px;padding:7px 9px;background:#fff}.student.absent{opacity:.45;text-decoration:line-through}.student input[type=checkbox]{transform:scale(1.05)}
+    .teams{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.team{border:1px solid var(--border);border-radius:16px;overflow:hidden;background:#fff}.team-head{padding:8px 10px;background:var(--green-soft);border-bottom:1px solid #dcfce7;font-weight:800;color:#166534;display:flex;justify-content:space-between}.team ul{margin:0;padding:10px 16px}.team li{margin:5px 0}
+    .field-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}.field{border:2px solid #dcfce7;border-radius:18px;background:#fff;overflow:hidden}.field-head{background:#f0fdf4;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #dcfce7}.score{font-size:34px;font-weight:900;text-align:center}.timer{font-variant-numeric:tabular-nums;font-size:26px;font-weight:900;color:#166534}.side{border:1px solid var(--border);border-radius:14px;padding:10px;background:#f8fafc}.side h4{margin:0 0 8px 0}.select-wide{width:100%}.recommend{margin-top:10px;border-radius:14px;padding:10px;background:#f8fafc;border:1px solid var(--border)}.recommend strong{display:block;margin-bottom:4px}.good{background:#ecfdf5;border-color:#bbf7d0}.warn{background:#fff7ed;border-color:#fed7aa}.danger{background:#fef2f2;border-color:#fecaca}.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:720px){.two{grid-template-columns:1fr}}
+    .log{max-height:200px;overflow:auto;font-size:12px;background:#0f172a;color:#e2e8f0;border-radius:14px;padding:10px;white-space:pre-wrap}.notice{border-left:5px solid var(--green);background:#f8fafc;padding:10px;border-radius:12px;color:#334155;font-size:13px}.danger-text{color:#b91c1c}.ok-text{color:#15803d}.copy{user-select:all;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#f1f5f9;border:1px dashed #cbd5e1;padding:6px 8px;border-radius:10px}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>🏑 Floorball Procap/Handicap</h1>
+      <div class="muted">Offline nutzbar · optional Live-Session mit Raumcode · keine Rundendaten dauerhaft im Offline-Modus</div>
+    </div>
+    <div class="row">
+      <span id="modePill" class="pill offline">Offline</span>
+      <button class="tab active" id="tabTeacher" onclick="switchView('teacher')">Lehrkraft</button>
+      <button class="tab" id="tabPlayer" onclick="switchView('player')">iPad beitreten</button>
+      <button class="tab" id="tabGame" onclick="switchView('game')">Spielmodus</button>
+    </div>
+  </header>
+
+  <section id="teacherView" class="grid main">
+    <aside class="grid">
+      <div class="card">
+        <h2>1. Klasse vorbereiten</h2>
+        <div class="row">
+          <select id="classSelect" style="flex:1"><option value="">-- Klasse laden --</option></select>
+          <button class="small" onclick="loadClass()">Laden</button>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <input id="className" placeholder="Klassenname, z. B. 8b" style="flex:1" />
+          <button class="small primary" onclick="saveClass()">Speichern</button>
+          <button class="small red" onclick="deleteClass()">Löschen</button>
+        </div>
+        <h3>Namen einfügen</h3>
+        <textarea id="nameInput" placeholder="Vornamen, Kürzel oder Nummern – jeweils neue Zeile oder Komma"></textarea>
+        <div class="row" style="margin-top:8px">
+          <button class="primary full" onclick="addNames()">Hinzufügen</button>
+        </div>
+        <h3>SuS (<span id="studentCount">0</span>)</h3>
+        <div id="studentList" class="students"><div class="muted">Keine Namen</div></div>
+      </div>
+
+      <div class="card">
+        <h2>2. Teams erstellen</h2>
+        <div class="two">
+          <label>Teamgröße<br><input type="number" id="teamSize" min="2" max="6" value="3" style="width:100%"></label>
+          <label>Anzahl Kleinfelder<br><input type="number" id="fieldCount" min="1" max="6" value="3" style="width:100%"></label>
+        </div>
+        <div class="two" style="margin-top:8px">
+          <label>Spielzeit/Runde<br><select id="roundMinutes" style="width:100%"><option value="3">3 Min</option><option value="4" selected>4 Min</option><option value="5">5 Min</option><option value="6">6 Min</option></select></label>
+          <label>Gruppenlogik<br><select id="teamMode" style="width:100%"><option value="balanced">grob ausgleichen</option><option value="random">zufällig</option></select></label>
+        </div>
+        <button class="primary full" style="margin-top:12px" onclick="generateTeams()">Teams & Felder erstellen</button>
+        <div class="notice" style="margin-top:10px">Tipp für Datenschutz: Für Live-Sessions besser Kürzel/Nummern nutzen und nach der Stunde löschen.</div>
+      </div>
+
+      <div class="card">
+        <h2>3. Live-Session optional</h2>
+        <div class="notice">Offline funktioniert ohne Internet. Live benötigt Firebase-Konfiguration und WLAN. Die App erstellt dann einen Raumcode, dem andere iPads beitreten.</div>
+        <h3>Firebase Config JSON</h3>
+        <textarea id="firebaseConfigInput" placeholder='{"apiKey":"...","authDomain":"...","projectId":"...",...}'></textarea>
+        <div class="row" style="margin-top:8px">
+          <button class="blue" onclick="connectFirebase()">Firebase verbinden</button>
+          <button class="ghost" onclick="saveFirebaseConfig()">Config lokal merken</button>
+        </div>
+        <h3>Raum</h3>
+        <div class="row">
+          <input id="roomCode" placeholder="Raumcode" style="flex:1" />
+          <button class="blue" onclick="createLiveSession()">Room erstellen</button>
+        </div>
+        <div id="roomInfo" class="muted" style="margin-top:8px"></div>
+        <div class="row" style="margin-top:8px">
+          <button class="red" onclick="deleteLiveSession()">Session komplett löschen</button>
+          <button class="orange" onclick="clearRoundData()">Nur Rundendaten löschen</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="grid">
+      <div class="card">
+        <h2>Teams</h2>
+        <div id="teamsContainer" class="muted">Noch keine Teams erstellt.</div>
+      </div>
+      <div class="card">
+        <h2>Felder / Spielübersicht</h2>
+        <div id="fieldsContainer" class="muted">Nach dem Erstellen erscheinen hier die Kleinfelder.</div>
+      </div>
+    </main>
+  </section>
+
+  <section id="playerView" class="hidden grid main">
+    <aside class="grid">
+      <div class="card">
+        <h2>iPad einer Live-Session beitreten</h2>
+        <h3>Firebase Config JSON</h3>
+        <textarea id="joinFirebaseConfigInput" placeholder='Gleiche Firebase Config wie bei der Lehrkraft'></textarea>
+        <div class="row" style="margin-top:8px">
+          <button class="blue" onclick="connectFirebase(true)">Firebase verbinden</button>
+          <button class="ghost" onclick="copyTeacherConfigToJoin()">Config von Lehrkraft übernehmen</button>
+        </div>
+        <h3>Raumcode</h3>
+        <div class="row">
+          <input id="joinRoomCode" placeholder="z. B. FLOOR-482" style="flex:1" />
+          <button class="blue" onclick="joinLiveSession()">Beitreten</button>
+        </div>
+        <h3>Kleinfeld wählen</h3>
+        <select id="joinFieldSelect" style="width:100%"></select>
+        <button class="primary full" style="margin-top:10px" onclick="openJoinedField()">Feld öffnen</button>
+        <div id="joinInfo" class="muted" style="margin-top:8px"></div>
+      </div>
+    </aside>
+    <main class="card">
+      <h2>Live-Spielmodus</h2>
+      <div id="joinedFieldContainer" class="muted">Noch keinem Feld beigetreten.</div>
+    </main>
+  </section>
+
+  <section id="gameView" class="hidden card">
+    <h2>Spielmodus</h2>
+    <div class="notice">Offline: Felder werden lokal gesteuert. Live: Änderungen werden in den Raum geschrieben, sodass die Lehrkraft sie sehen kann.</div>
+    <div id="gameFieldsContainer" class="field-grid" style="margin-top:12px"></div>
+  </section>
+</div>
+
+<script type="module">
+  // ---------------- STATE ----------------
+  let students = [];
+  let teams = [];
+  let fields = [];
+  let currentClassName = '';
+  let timers = {};
+  let firebaseReady = false;
+  let app, auth, db, fb;
+  let currentRoom = '';
+  let liveUnsub = null;
+  let teacherPin = localStorage.getItem('fbph_teacher_pin') || makeCode(6);
+  localStorage.setItem('fbph_teacher_pin', teacherPin);
+
+  const $ = (id) => document.getElementById(id);
+  const saveLocal = () => localStorage.setItem('fbph_state', JSON.stringify({students, teams, fields, currentClassName}));
+  const loadLocal = () => {
+    try { const s = JSON.parse(localStorage.getItem('fbph_state') || '{}'); students=s.students||[]; teams=s.teams||[]; fields=s.fields||[]; currentClassName=s.currentClassName||''; } catch(e){}
+  };
+
+  function makeId(){ return Math.random().toString(36).slice(2,10); }
+  function makeCode(len=3){ const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let out=''; for(let i=0;i<len;i++) out+=chars[Math.floor(Math.random()*chars.length)]; return out; }
+  function nowIso(){ return new Date().toISOString(); }
+  function notify(msg, error=false){
+    const t=document.createElement('div'); t.textContent=msg; t.style.cssText=`position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:9999;padding:12px 16px;border-radius:14px;color:white;font-weight:800;box-shadow:0 10px 30px rgba(0,0,0,.2);background:${error?'#dc2626':'#16a34a'}`; document.body.appendChild(t); setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),300)},2600);
+  }
+
+  // ---------------- VIEW ----------------
+  window.switchView = function(view){
+    ['teacher','player','game'].forEach(v=>{
+      $(v+'View').classList.toggle('hidden', v!==view);
+      $('tab'+v[0].toUpperCase()+v.slice(1)).classList.toggle('active', v===view);
+    });
+    if(view==='game') renderGameFields();
+  };
+
+  function updateModePill(){
+    $('modePill').textContent = currentRoom ? `Live: ${currentRoom}` : 'Offline';
+    $('modePill').className = `pill ${currentRoom?'live':'offline'}`;
+  }
+
+  // ---------------- CLASS MANAGEMENT ----------------
+  window.addNames = function(){
+    const raw = $('nameInput').value.split(/[\n,;]+/).map(x=>x.trim()).filter(Boolean);
+    let added=0;
+    raw.forEach(name=>{
+      if(!students.some(s=>s.name===name)) { students.push({id:makeId(), name, absent:false, skill:5}); added++; }
+    });
+    $('nameInput').value=''; renderAll(); if(added) notify(`${added} SuS hinzugefügt.`);
+  };
+  window.removeStudent = function(id){ students = students.filter(s=>s.id!==id); renderAll(); };
+  window.toggleAbsent = function(id, val){ const s=students.find(x=>x.id===id); if(s) s.absent=val; renderAll(); };
+  window.setSkill = function(id, val){ const s=students.find(x=>x.id===id); if(s) s.skill=parseInt(val)||5; saveLocal(); };
+  function renderStudents(){
+    $('studentCount').textContent = students.length;
+    if(!students.length){ $('studentList').innerHTML='<div class="muted">Keine Namen</div>'; return; }
+    $('studentList').innerHTML = students.map(s=>`<div class="student ${s.absent?'absent':''}">
+      <label class="row" style="flex:1"><input type="checkbox" ${s.absent?'checked':''} onchange="toggleAbsent('${s.id}', this.checked)"><strong>${escapeHtml(s.name)}</strong></label>
+      <input title="Stärke" type="number" min="1" max="10" value="${s.skill||5}" style="width:62px" onchange="setSkill('${s.id}', this.value)">
+      <button class="small red" onclick="removeStudent('${s.id}')">×</button>
+    </div>`).join('');
+  }
+  window.saveClass = function(){
+    const name=$('className').value.trim() || currentClassName || 'Klasse'; currentClassName=name;
+    const all=JSON.parse(localStorage.getItem('fbph_classes')||'{}');
+    all[name]={name,students,updatedAt:nowIso()}; localStorage.setItem('fbph_classes',JSON.stringify(all)); refreshClassSelect(); saveLocal(); notify(`Klasse „${name}“ lokal gespeichert.`);
+  };
+  window.loadClass = function(){
+    const name=$('classSelect').value; if(!name) return;
+    const all=JSON.parse(localStorage.getItem('fbph_classes')||'{}'); if(!all[name]) return;
+    currentClassName=name; $('className').value=name; students=(all[name].students||[]).map(s=>({...s,absent:false})); teams=[]; fields=[]; renderAll(); notify(`Klasse „${name}“ geladen.`);
+  };
+  window.deleteClass = function(){
+    const name=$('classSelect').value || $('className').value.trim(); if(!name) return;
+    const all=JSON.parse(localStorage.getItem('fbph_classes')||'{}'); delete all[name]; localStorage.setItem('fbph_classes',JSON.stringify(all)); refreshClassSelect(); notify(`Klasse „${name}“ lokal gelöscht.`);
+  };
+  function refreshClassSelect(){
+    const all=JSON.parse(localStorage.getItem('fbph_classes')||'{}');
+    $('classSelect').innerHTML='<option value="">-- Klasse laden --</option>'+Object.keys(all).sort().map(n=>`<option value="${escapeAttr(n)}">${escapeHtml(n)}</option>`).join('');
+  }
+
+  // ---------------- TEAMS/FIELDS ----------------
+  window.generateTeams = function(){
+    const active=students.filter(s=>!s.absent); if(active.length<4) return notify('Zu wenige aktive SuS.', true);
+    const size=parseInt($('teamSize').value)||3; const numTeams=Math.ceil(active.length/size);
+    const mode=$('teamMode').value;
+    let list=[...active];
+    if(mode==='balanced') list.sort((a,b)=>(b.skill||5)-(a.skill||5)); else list.sort(()=>Math.random()-.5);
+    teams=Array.from({length:numTeams},(_,i)=>({id:makeId(), name:`Team ${i+1}`, students:[]}));
+    if(mode==='balanced'){
+      list.forEach((s,i)=>{ const idx = Math.floor(i/numTeams)%2===0 ? i%numTeams : numTeams-1-(i%numTeams); teams[idx].students.push(s); });
+    } else list.forEach((s,i)=>teams[i%numTeams].students.push(s));
+    createFields(); renderAll(); notify('Teams und Felder erstellt.');
+  };
+  function createFields(){
+    const fc=parseInt($('fieldCount').value)||3; fields=[];
+    for(let i=0;i<Math.min(fc, Math.floor(teams.length/2)); i++){
+      fields.push({id:makeId(), index:i, name:`Kleinfeld ${i+1}`, teamA:teams[i*2]?.id, teamB:teams[i*2+1]?.id, scoreA:0, scoreB:0, round:1, recommendations:[], lastObservation:null, updatedAt:nowIso()});
+    }
+  }
+  function getTeam(id){ return teams.find(t=>t.id===id); }
+  function renderTeams(){
+    if(!teams.length){ $('teamsContainer').innerHTML='<div class="muted">Noch keine Teams erstellt.</div>'; return; }
+    $('teamsContainer').innerHTML='<div class="teams">'+teams.map(t=>`<div class="team"><div class="team-head"><span>${escapeHtml(t.name)}</span><span>${t.students.length}</span></div><ul>${t.students.map(s=>`<li>${escapeHtml(s.name)}</li>`).join('')}</ul></div>`).join('')+'</div>';
+  }
+  function renderFieldsSummary(){
+    if(!fields.length){ $('fieldsContainer').innerHTML='<div class="muted">Nach dem Erstellen erscheinen hier die Kleinfelder.</div>'; return; }
+    $('fieldsContainer').innerHTML='<div class="field-grid">'+fields.map(f=>fieldCardHtml(f,false)).join('')+'</div>';
+  }
+  function renderAll(){ renderStudents(); renderTeams(); renderFieldsSummary(); renderGameFields(); refreshClassSelect(); $('className').value=currentClassName; saveLocal(); }
+
+  // ---------------- GAME UI ----------------
+  function teamOptions(teamId){
+    const t=getTeam(teamId); if(!t) return '<option value="">--</option>';
+    return '<option value="">-- auswählen --</option>'+t.students.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+  }
+  function fieldCardHtml(f, interactive=true, joined=false){
+    const a=getTeam(f.teamA), b=getTeam(f.teamB); const mins=parseInt($('roundMinutes').value)||4;
+    return `<div class="field" id="field-${f.id}">
+      <div class="field-head"><strong>${escapeHtml(f.name)} · Runde ${f.round||1}</strong><span class="timer" id="timer-${f.id}">${formatTime((timers[f.id]?.remaining ?? mins*60))}</span></div>
+      <div style="padding:12px" class="grid">
+        <div class="score"><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','A',-1)">−</button> <span id="score-${f.id}">${f.scoreA||0} : ${f.scoreB||0}</span> <button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','B',1)">+</button></div>
+        <div class="row" style="justify-content:center">
+          <button class="primary" ${interactive?'':'disabled'} onclick="startTimer('${f.id}')">Start</button>
+          <button class="ghost" ${interactive?'':'disabled'} onclick="pauseTimer('${f.id}')">Pause</button>
+          <button class="orange" ${interactive?'':'disabled'} onclick="finishRound('${f.id}')">Runde auswerten</button>
+          <button class="ghost" ${interactive?'':'disabled'} onclick="resetFieldRound('${f.id}')">Reset</button>
+        </div>
+        <div class="two">
+          <div class="side"><h4>${escapeHtml(a?.name||'Team A')}</h4>
+            <label>spielprägend<br><select class="select-wide" id="domA-${f.id}">${teamOptions(f.teamA)}</select></label><br><br>
+            <label>wenig eingebunden<br><select class="select-wide" id="lowA-${f.id}">${teamOptions(f.teamA)}</select></label>
+            <div class="row" style="margin-top:8px"><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','A',1)">Tor +</button><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','A',-1)">Tor −</button></div>
+          </div>
+          <div class="side"><h4>${escapeHtml(b?.name||'Team B')}</h4>
+            <label>spielprägend<br><select class="select-wide" id="domB-${f.id}">${teamOptions(f.teamB)}</select></label><br><br>
+            <label>wenig eingebunden<br><select class="select-wide" id="lowB-${f.id}">${teamOptions(f.teamB)}</select></label>
+            <div class="row" style="margin-top:8px"><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','B',1)">Tor +</button><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','B',-1)">Tor −</button></div>
+          </div>
+        </div>
+        <label>Hauptproblem<br><select id="problem-${f.id}" style="width:100%">
+          <option value="solo">zu viele Einzelaktionen</option><option value="passes">zu wenig Passspiel</option><option value="pressure">zu hoher Druck auf Unsichere</option><option value="uneven">Spiel sehr unausgeglichen</option><option value="rules">Regelstreit/Fairnessproblem</option><option value="ok">alle waren gut beteiligt</option>
+        </select></label>
+        <div id="rec-${f.id}">${recommendationsHtml(f)}</div>
+      </div>
+    </div>`;
+  }
+  function renderGameFields(){ const c=$('gameFieldsContainer'); if(!c) return; c.innerHTML = fields.length ? fields.map(f=>fieldCardHtml(f,true)).join('') : '<div class="muted">Noch keine Felder vorhanden.</div>'; }
+  function formatTime(sec){ sec=Math.max(0,sec|0); return `${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`; }
+  window.changeScore=function(fid, side, delta){ const f=fields.find(x=>x.id===fid); if(!f) return; if(side==='A') f.scoreA=Math.max(0,(f.scoreA||0)+delta); else f.scoreB=Math.max(0,(f.scoreB||0)+delta); pushLiveField(f); renderGameFields(); renderFieldsSummary(); };
+  window.startTimer=function(fid){ const mins=parseInt($('roundMinutes').value)||4; if(!timers[fid]) timers[fid]={remaining:mins*60,int:null}; if(timers[fid].int) return; timers[fid].int=setInterval(()=>{timers[fid].remaining--; const el=$('timer-'+fid); if(el) el.textContent=formatTime(timers[fid].remaining); if(timers[fid].remaining<=0){ pauseTimer(fid); finishRound(fid); }},1000); };
+  window.pauseTimer=function(fid){ if(timers[fid]?.int){ clearInterval(timers[fid].int); timers[fid].int=null; } };
+  window.resetFieldRound=function(fid){ pauseTimer(fid); const mins=parseInt($('roundMinutes').value)||4; timers[fid]={remaining:mins*60,int:null}; const f=fields.find(x=>x.id===fid); if(f){f.scoreA=0;f.scoreB=0;f.recommendations=[];f.lastObservation=null; pushLiveField(f);} renderGameFields(); renderFieldsSummary(); };
+
+  window.finishRound=function(fid){
+    pauseTimer(fid); const f=fields.find(x=>x.id===fid); if(!f) return;
+    const obs={
+      domA:$('domA-'+fid)?.value||'', lowA:$('lowA-'+fid)?.value||'', domB:$('domB-'+fid)?.value||'', lowB:$('lowB-'+fid)?.value||'',
+      problem:$('problem-'+fid)?.value||'solo', scoreA:f.scoreA||0, scoreB:f.scoreB||0, at:nowIso(), round:f.round||1
+    };
+    f.lastObservation=obs; f.recommendations=makeRecommendations(f,obs); f.round=(f.round||1)+1; f.scoreA=0; f.scoreB=0;
+    const mins=parseInt($('roundMinutes').value)||4; timers[fid]={remaining:mins*60,int:null};
+    pushLiveField(f); renderGameFields(); renderFieldsSummary(); notify('Runde ausgewertet. Regelkarte testen!');
+  };
+  function studentName(id){ return students.find(s=>s.id===id)?.name || teams.flatMap(t=>t.students).find(s=>s.id===id)?.name || 'Person'; }
+  function makeRecommendations(f,obs){
+    const rec=[]; const diff=(obs.scoreA||0)-(obs.scoreB||0);
+    const add=(type,text,why)=>rec.push({type,text,why});
+    const doms=[obs.domA,obs.domB].filter(Boolean), lows=[obs.lowA,obs.lowB].filter(Boolean);
+    doms.forEach(id=> add('Handicap / Spielmacher-Challenge', `${studentName(id)}: Du darfst Tore vorbereiten, aber in der nächsten Runde nicht selbst abschließen.`, 'Lenkt Dominanz in Vorlagen und Zusammenspiel um.'));
+    lows.forEach(id=> add('Procap / Einbindungshilfe', `${studentName(id)}: Nach deiner Ballannahme hast du 3 Sekunden Schutz vor direktem Angriff.`, 'Gibt Zeit für Ballkontrolle und Entscheidung.'));
+    if(obs.problem==='solo') add('Teamregel', 'Tor zählt nur, wenn vorher mindestens 3 verschiedene Teammitglieder beteiligt waren.', 'Reduziert Soloaktionen und erzwingt Einbindung.');
+    if(obs.problem==='passes') add('Teamregel', 'Vor jedem Torabschluss müssen mindestens 2 Pässe gespielt werden.', 'Macht Passspiel zum Spielziel.');
+    if(obs.problem==='pressure') add('Procap-Zone', 'In der markierten Passzone darf nicht direkt verteidigt werden.', 'Schafft sichere Anspielstationen.');
+    if(obs.problem==='rules') add('Fairnessregel', 'Ein Punkt zählt nur, wenn das gegnerische Team die Zusatzregel bestätigt. Bei Streit: kein Punkt, direkt weiterspielen.', 'Verringert Diskussionen und stärkt Regelverantwortung.');
+    if(Math.abs(diff)>=3) add('Ausgleichsregel', 'Führendes Team: Tor zählt nur nach 3 Pässen. Zurückliegendes Team: 3-Sekunden-Schutz nach Ballgewinn.', 'Macht ein ungleiches Spiel spannender.');
+    if(obs.problem==='ok' && rec.length===0) add('Nächste Challenge', 'Tor zählt nur nach Seitenwechsel oder Pass aus der Außenzone.', 'Wenn Beteiligung klappt, wird das Zusammenspiel taktisch anspruchsvoller.');
+    if(rec.length===0) add('Teamregel', 'Ein Tor zählt nur, wenn mindestens 3 verschiedene Teammitglieder beteiligt waren.', 'Standardregel für mehr Miteinander.');
+    return rec.slice(0,4);
+  }
+  function recommendationsHtml(f){
+    if(!f.recommendations?.length) return '<div class="recommend"><strong>Noch keine Regelkarte</strong><span class="muted">Nach der Runde auswerten.</span></div>';
+    return f.recommendations.map(r=>`<div class="recommend ${r.type.includes('Procap')?'good':r.type.includes('Handicap')?'warn':''}"><strong>${escapeHtml(r.type)}</strong><div>${escapeHtml(r.text)}</div><div class="muted">${escapeHtml(r.why)}</div></div>`).join('');
+  }
+
+  // ---------------- FIREBASE LIVE ----------------
+  window.saveFirebaseConfig=function(){ const v=$('firebaseConfigInput').value.trim(); if(v){ localStorage.setItem('fbph_firebase_config',v); notify('Firebase Config lokal im Browser gespeichert.'); } };
+  window.copyTeacherConfigToJoin=function(){ $('joinFirebaseConfigInput').value=$('firebaseConfigInput').value || localStorage.getItem('fbph_firebase_config') || ''; };
+  async function initFirebaseFromConfig(configText){
+    if(firebaseReady) return true;
+    let config; try{ config=JSON.parse(configText); }catch(e){ notify('Firebase Config ist kein gültiges JSON.', true); return false; }
+    const { initializeApp } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js');
+    const { getAuth, signInAnonymously } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
+    const { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
+    app=initializeApp(config); auth=getAuth(app); db=getFirestore(app); await signInAnonymously(auth);
+    fb={doc,setDoc,getDoc,updateDoc,deleteDoc,onSnapshot,serverTimestamp}; firebaseReady=true; notify('Firebase verbunden.'); return true;
+  }
+  window.connectFirebase=async function(join=false){
+    const txt = join ? ($('joinFirebaseConfigInput').value || localStorage.getItem('fbph_firebase_config') || '') : ($('firebaseConfigInput').value || localStorage.getItem('fbph_firebase_config') || '');
+    if(!txt) return notify('Bitte Firebase Config einfügen.', true);
+    if(!join) $('firebaseConfigInput').value=txt; else $('joinFirebaseConfigInput').value=txt;
+    await initFirebaseFromConfig(txt);
+  };
+  window.createLiveSession=async function(){
+    if(!firebaseReady){ const ok=await initFirebaseFromConfig($('firebaseConfigInput').value||localStorage.getItem('fbph_firebase_config')||''); if(!ok) return; }
+    if(!teams.length || !fields.length) return notify('Erst Teams/Felder erstellen.', true);
+    currentRoom = ($('roomCode').value.trim().toUpperCase() || `FLOOR-${makeCode(3)}`).replace(/\s+/g,'-'); $('roomCode').value=currentRoom;
+    const session={roomCode:currentRoom, className:currentClassName||$('className').value||'Klasse', teacherPin, createdAt:nowIso(), updatedAt:nowIso(), expiresAt:new Date(Date.now()+4*60*60*1000).toISOString(), students, teams, fields, settings:{roundMinutes:parseInt($('roundMinutes').value)||4, fieldCount:parseInt($('fieldCount').value)||3}};
+    await fb.setDoc(fb.doc(db,'floorballSessions',currentRoom), session);
+    subscribeRoom(currentRoom); updateModePill(); $('roomInfo').innerHTML=`Raumcode: <span class="copy">${currentRoom}</span> · PIN lokal: <span class="copy">${teacherPin}</span> · Ablauf: ${new Date(session.expiresAt).toLocaleTimeString('de-DE')}`; notify('Live-Session erstellt.');
+  };
+  function subscribeRoom(code){
+    if(liveUnsub) liveUnsub();
+    liveUnsub = fb.onSnapshot(fb.doc(db,'floorballSessions',code),(snap)=>{
+      if(!snap.exists()) { notify('Live-Session wurde gelöscht.', true); currentRoom=''; updateModePill(); return; }
+      const d=snap.data(); students=d.students||students; teams=d.teams||teams; fields=d.fields||fields; currentClassName=d.className||currentClassName; renderAll(); updateModePill();
+    });
+  }
+  async function pushLiveField(f){
+    saveLocal();
+    if(!currentRoom || !firebaseReady) return;
+    try{ await fb.updateDoc(fb.doc(db,'floorballSessions',currentRoom), {fields, updatedAt:nowIso()}); }catch(e){ console.warn(e); }
+  }
+  window.deleteLiveSession=async function(){
+    if(!currentRoom || !firebaseReady) return notify('Keine Live-Session aktiv.', true);
+    if(!confirm(`Session ${currentRoom} wirklich komplett löschen?`)) return;
+    await fb.deleteDoc(fb.doc(db,'floorballSessions',currentRoom)); currentRoom=''; updateModePill(); $('roomInfo').textContent='Session gelöscht.'; notify('Live-Session gelöscht.');
+  };
+  window.clearRoundData=async function(){
+    fields=fields.map(f=>({...f, scoreA:0, scoreB:0, round:1, recommendations:[], lastObservation:null}));
+    if(currentRoom && firebaseReady) await fb.updateDoc(fb.doc(db,'floorballSessions',currentRoom), {fields, updatedAt:nowIso()});
+    renderAll(); notify('Rundendaten gelöscht. Teams bleiben erhalten.');
+  };
+  window.joinLiveSession=async function(){
+    if(!firebaseReady){ const ok=await initFirebaseFromConfig($('joinFirebaseConfigInput').value||localStorage.getItem('fbph_firebase_config')||''); if(!ok) return; }
+    const code=$('joinRoomCode').value.trim().toUpperCase(); if(!code) return notify('Raumcode eingeben.', true);
+    const snap=await fb.getDoc(fb.doc(db,'floorballSessions',code)); if(!snap.exists()) return notify('Raum nicht gefunden.', true);
+    currentRoom=code; const d=snap.data(); students=d.students||[]; teams=d.teams||[]; fields=d.fields||[]; if(d.settings?.roundMinutes) $('roundMinutes').value=d.settings.roundMinutes;
+    subscribeRoom(code); updateJoinFieldSelect(); updateModePill(); $('joinInfo').textContent=`Beigetreten: ${code}. Wähle dein Kleinfeld.`; notify('Live-Session beigetreten.');
+  };
+  function updateJoinFieldSelect(){ $('joinFieldSelect').innerHTML=fields.map(f=>`<option value="${f.id}">${escapeHtml(f.name)}: ${escapeHtml(getTeam(f.teamA)?.name||'A')} vs. ${escapeHtml(getTeam(f.teamB)?.name||'B')}</option>`).join(''); }
+  window.openJoinedField=function(){ const id=$('joinFieldSelect').value; const f=fields.find(x=>x.id===id); if(!f) return; $('joinedFieldContainer').innerHTML=fieldCardHtml(f,true,true); };
+
+  // ---------------- HELPERS ----------------
+  function escapeHtml(s){ return String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+  function escapeAttr(s){ return escapeHtml(s).replace(/`/g,'&#96;'); }
+
+  // Init
+  loadLocal(); refreshClassSelect(); $('firebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||''; $('joinFirebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||''; renderAll(); updateModePill(); updateJoinFieldSelect();
+
+  // Make some functions global for inline handlers in module context
+  Object.assign(window,{pauseTimer});
+</script>
+</body>
+</html>
