@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Teamsport Pro- und Handicap Generator – Offline & Live v31</title>
+  <title>Teamsport Pro- und Handicap Generator – Offline & Live v32</title>
   <style>
     :root{
       --green:#16a34a; --green-dark:#15803d; --green-soft:#ecfdf5;
@@ -215,7 +215,19 @@
         <div style="margin-top:8px">
           <label>Auslöser/Ziel<br><select id="ruleTarget" style="width:100%"><option value="dominant">Person war oft beteiligt</option><option value="low">Person kam wenig ins Spiel</option><option value="team">Teamregel bei ähnlicher Beteiligung</option><option value="leading">führendes Team</option><option value="trailing">zurückliegendes Team</option><option value="all">Zusatzchallenge, wenn keine Auffälligkeit eingetragen wurde</option></select></label>
         </div>
-        <label class="row" style="margin-top:8px;gap:8px"><input type="checkbox" id="ruleCreative"><span>Spielerische/kreative Karte</span></label>
+        <div style="margin-top:10px">
+          <div style="font-weight:700;margin-bottom:6px">Geeignet für (Mehrfachauswahl möglich)</div>
+          <div id="ruleSportsChoices" class="two" style="gap:6px 14px">
+            <label class="row" style="gap:7px"><input type="checkbox" value="general" class="rule-sport-check"><span>Allgemein / Teamsport</span></label>
+            <label class="row" style="gap:7px"><input type="checkbox" value="football" class="rule-sport-check"><span>Fußball</span></label>
+            <label class="row" style="gap:7px"><input type="checkbox" value="handball" class="rule-sport-check"><span>Handball</span></label>
+            <label class="row" style="gap:7px"><input type="checkbox" value="basketball" class="rule-sport-check"><span>Basketball</span></label>
+            <label class="row" style="gap:7px"><input type="checkbox" value="floorball" class="rule-sport-check"><span>Floorball / Unihockey</span></label>
+            <label class="row" style="gap:7px"><input type="checkbox" value="ultimate" class="rule-sport-check"><span>Ultimate / Frisbee</span></label>
+          </div>
+          <div class="muted" style="margin-top:5px">Mindestens eine Sportart auswählen. Eine Karte kann mehreren Sportarten zugeordnet werden.</div>
+        </div>
+        <label class="row" style="margin-top:10px;gap:8px"><input type="checkbox" id="ruleCreative"><span>Spielerische/kreative Karte</span></label>
         <label>Titel<br><input id="ruleTitle" style="width:100%" placeholder="z. B. Spielmacher-Challenge"></label>
         <label>Regeltext<br><textarea id="ruleText" placeholder="z. B. {name}: Du darfst Tore vorbereiten, aber nicht selbst abschließen."></textarea></label>
         <label>Warum passt diese Karte?<br><textarea id="ruleWhy" placeholder="kurze didaktische Begründung für die Auswertung"></textarea></label>
@@ -315,7 +327,7 @@
     {id:'fun_general_own_half', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['general','football','basketball','handball','floorball','ultimate'], title:'Rückraum-Challenge', text:'{name}: Du darfst die eigene Spielfeldhälfte nicht verlassen und musst von dort aus vorbereiten.', why:'Spielerische Raumrolle, die auf jedem normalen Spielfeld funktioniert.'},
     {id:'fun_general_no_goal_area', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', sports:['general','football','basketball','handball','floorball'], title:'Abschluss-Sperre vor dem Tor', text:'{name}: Im letzten Drittel vor dem gegnerischen Tor darfst du nicht selbst abschließen.', why:'Klare starke Challenge ohne zusätzliche Markierungen.'},
     {id:'fun_general_assist_after_touch', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['general','football','basketball','handball','floorball','ultimate'], title:'Erst passen, dann wieder angreifen', text:'{name}: Nach jedem eigenen Ballkontakt musst du zunächst abspielen, bevor du den Ball wieder bekommen darfst.', why:'Unterbricht dominante Ballfolgen und fördert Einbindung.'},
-    {id:'fun_football_handhold', active:true, creative:true, type:'Handicap', target:'leading', problem:'uneven', strength:'mittel', sports:['football'], title:'Hand-in-Hand-Duo', text:'{team}: Zwei Personen spielen bis zum nächsten Tor Hand in Hand. Kein Ziehen oder Festhalten gegen andere.', why:'Bremst ein führendes Team spielerisch und verlangt Abstimmung.'},
+    {id:'fun_football_handhold', active:true, creative:true, type:'Handicap', target:'leading', problem:'uneven', strength:'mittel', sports:['football','handball'], title:'Hand-in-Hand-Duo', text:'{team}: Zwei Personen spielen bis zum nächsten Tor Hand in Hand. Nicht ziehen und andere nicht blockieren.', why:'Bremst ein führendes Team spielerisch und verlangt Abstimmung.'},
     {id:'fun_football_weak_foot_only', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['football'], title:'Nur schwächerer Fuß', text:'{name}: Du darfst den Ball nur mit deinem schwächeren Fuß spielen.', why:'Spielerische technische Herausforderung für häufig beteiligte Personen.'},
     {id:'fun_football_walk_only', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', sports:['football'], title:'Nur gehen', text:'{name}: Mit Ball am Fuß darfst du nur gehen, nicht laufen.', why:'Bremst starke Dribblings deutlich und fördert frühzeitiges Abspielen.'},
     {id:'fun_football_no_own_goal', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['football'], title:'Vorlagen-Challenge', text:'{name}: Du darfst selbst keine Tore erzielen, sondern nur vorbereiten.', why:'Lenkt eine häufig beteiligte Person in die Vorlagenrolle.'},
@@ -341,7 +353,7 @@
     {id:'fu_low_goal_double', active:true, type:'Procap', target:'low', problem:'any', strength:'stark', sports:['football'], title:'Doppeltes Tor', text:'Ein Tor von {name} zählt doppelt.', why:'Starker Abschlussbonus zur gezielten Einbindung einer wenig beteiligten Person.'},
     {id:'fu_team_no_direct_goal', active:true, type:'Teamregel', target:'team', problem:'any', strength:'mittel', sports:['football'], title:'Kein Direkt-Solo-Tor', text:'{team}: Ein Tor zählt nur, wenn vorher mindestens ein Pass gespielt wurde.', why:'Macht Fußball stärker zum Zusammenspiel.'},
 
-    {id:'football_pair_handhold', active:true, type:'Handicap', target:'leading', problem:'uneven', strength:'mittel', sports:['football'], title:'Handfassung-Duo', text:'{team}: Zwei Personen spielen eine Runde als Handfassung-Duo. Kein Ziehen, kein Blocken.', why:'Geeignet für Fußball-Kleinfeld: Überlegenheit wird gebremst, Absprachen und gemeinsames Bewegen werden wichtiger.'},
+    {id:'football_pair_handhold', active:true, type:'Handicap', target:'leading', problem:'uneven', strength:'mittel', sports:['football','handball'], title:'Handfassung-Duo', text:'{team}: Zwei Personen spielen eine Runde Hand in Hand. Nicht ziehen und andere nicht blockieren.', why:'Geeignet für Fußball- und Handball-Kleinfelder: Überlegenheit wird gebremst, Absprachen und gemeinsames Bewegen werden wichtiger.'},
     {id:'football_pair_third_person', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['football'], title:'Zwei Mitspieler:innen einbeziehen', text:'{name}: Du darfst erst abschließen, wenn seit dem Ballgewinn zwei verschiedene Mitspieler:innen am Ball waren.', why:'Reduziert Zweier-Dominanz und fördert breitere Beteiligung.'},
 
     // Basketball-spezifisch
@@ -938,16 +950,27 @@
     const r=ruleCards.find(x=>x.id===id); if(!r) return;
     r.active=checked; localStorage.setItem('fbph_rule_cards', JSON.stringify(ruleCards)); saveLocal(); renderRuleEditor(); pushLiveRules();
   };
+  function setRuleSportChecks(sports){
+    const selected = new Set((sports && sports.length ? sports : ['general']));
+    document.querySelectorAll('.rule-sport-check').forEach(cb=>cb.checked=selected.has(cb.value));
+  }
+  function getRuleSportChecks(){
+    return [...document.querySelectorAll('.rule-sport-check:checked')].map(cb=>cb.value);
+  }
   window.newRuleCard=function(){
     $('ruleId').value=''; $('ruleActive').checked=true; if($('ruleCreative')) $('ruleCreative').checked=false; $('ruleType').value='Handicap'; $('ruleStrength').value='mittel'; $('ruleTarget').value='dominant'; $('ruleTitle').value=''; $('ruleText').value=''; $('ruleWhy').value='';
+    setRuleSportChecks([currentSport || 'general']);
   };
   window.editRuleCard=function(id){
     const r=ruleCards.find(x=>x.id===id); if(!r) return;
     $('ruleId').value=r.id; $('ruleActive').checked=r.active!==false; if($('ruleCreative')) $('ruleCreative').checked=!!r.creative; $('ruleType').value=r.type||'Teamregel'; $('ruleStrength').value=r.strength||'mittel'; $('ruleTarget').value=r.target||'team'; $('ruleTitle').value=r.title||''; $('ruleText').value=r.text||''; $('ruleWhy').value=r.why||'';
+    setRuleSportChecks(ruleSports(r));
     switchView('rules');
   };
   window.saveRuleCard=function(){
-    const r={id:$('ruleId').value||makeId(), active:$('ruleActive').checked, creative:$('ruleCreative')?.checked||false, type:$('ruleType').value, strength:$('ruleStrength').value, target:$('ruleTarget').value, problem:'any', title:$('ruleTitle').value.trim()||'Regelkarte', text:$('ruleText').value.trim(), why:$('ruleWhy').value.trim()};
+    const selectedSports=getRuleSportChecks();
+    if(!selectedSports.length) return notify('Bitte mindestens eine Sportart auswählen.', true);
+    const r={id:$('ruleId').value||makeId(), active:$('ruleActive').checked, creative:$('ruleCreative')?.checked||false, type:$('ruleType').value, strength:$('ruleStrength').value, target:$('ruleTarget').value, problem:'any', sports:selectedSports, title:$('ruleTitle').value.trim()||'Regelkarte', text:$('ruleText').value.trim(), why:$('ruleWhy').value.trim()};
     if(!r.text) return notify('Bitte Regeltext eintragen.', true);
     const idx=ruleCards.findIndex(x=>x.id===r.id); if(idx>=0) ruleCards[idx]=r; else ruleCards.push(r);
     localStorage.setItem('fbph_rule_cards', JSON.stringify(ruleCards)); saveLocal(); renderRuleEditor(); newRuleCard(); notify('Regelkarte gespeichert.');
