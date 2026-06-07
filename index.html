@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Teamsport Pro- und Handicap Generator – Offline & Live v32</title>
+  <title>Teamsport Pro- und Handicap Generator – Offline & Live v34</title>
   <style>
     :root{
       --green:#16a34a; --green-dark:#15803d; --green-soft:#ecfdf5;
@@ -24,7 +24,7 @@
     .teams{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.team{border:1px solid var(--border);border-radius:16px;overflow:hidden;background:#fff}.team-head{padding:8px 10px;background:var(--green-soft);border-bottom:1px solid #dcfce7;font-weight:800;color:#166534;display:flex;justify-content:space-between}.team ul{margin:0;padding:10px 16px}.team li{margin:5px 0}
     .field-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}.field{border:2px solid #dcfce7;border-radius:18px;background:#fff;overflow:hidden}.field-head{background:#f0fdf4;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #dcfce7}.score{font-size:34px;font-weight:900;text-align:center}.timer{font-variant-numeric:tabular-nums;font-size:26px;font-weight:900;color:#166534}.side{border:1px solid var(--border);border-radius:14px;padding:10px;background:#f8fafc}.side h4{margin:0 0 8px 0}.select-wide{width:100%}.recommend{margin-top:10px;border-radius:14px;padding:10px;background:#f8fafc;border:1px solid var(--border)}.recommend strong{display:block;margin-bottom:4px}.rotation-hint{margin-top:8px;padding:7px 9px;border-radius:12px;background:#f8fafc;border:1px dashed #cbd5e1;color:#475569;font-size:12px}.good{background:#ecfdf5;border-color:#bbf7d0}.warn{background:#fff7ed;border-color:#fed7aa}.danger{background:#fef2f2;border-color:#fecaca}.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:720px){.two{grid-template-columns:1fr}}
     .log{max-height:200px;overflow:auto;font-size:12px;background:#0f172a;color:#e2e8f0;border-radius:14px;padding:10px;white-space:pre-wrap}.notice{border-left:5px solid var(--green);background:#f8fafc;padding:10px;border-radius:12px;color:#334155;font-size:13px}.danger-text{color:#b91c1c}.ok-text{color:#15803d}.copy{user-select:all;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#f1f5f9;border:1px dashed #cbd5e1;padding:6px 8px;border-radius:10px}
-    .rule-list{display:grid;gap:10px}.rule-card{border:1px solid var(--border);border-radius:16px;background:#fff;padding:12px}.rule-card.inactive{opacity:.55}.rule-card textarea{min-height:54px}.badge{display:inline-block;border-radius:999px;padding:2px 7px;background:#e2e8f0;font-size:11px;font-weight:800}.badge.procap{background:#dcfce7;color:#166534}.badge.handicap{background:#ffedd5;color:#9a3412}.badge.team{background:#dbeafe;color:#1d4ed8}
+    .rule-list{display:grid;gap:14px}.rule-sport-group{border:1px solid var(--border);border-radius:18px;background:#f8fafc;padding:12px}.rule-sport-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #dcfce7}.rule-sport-head h3{margin:0;font-size:15px;text-transform:none;letter-spacing:0;color:#166534}.rule-strength-group{display:grid;gap:8px;margin-top:10px}.rule-strength-head{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;color:#475569;display:flex;align-items:center;gap:8px}.rule-strength-head:after{content:"";height:1px;background:#cbd5e1;flex:1}.rule-card{border:1px solid var(--border);border-radius:16px;background:#fff;padding:12px}.rule-card.inactive{opacity:.55}.rule-card textarea{min-height:54px}.badge{display:inline-block;border-radius:999px;padding:2px 7px;background:#e2e8f0;font-size:11px;font-weight:800}.badge.procap{background:#dcfce7;color:#166534}.badge.handicap{background:#ffedd5;color:#9a3412}.badge.team{background:#dbeafe;color:#1d4ed8}
 
     .qr-panel{margin-top:10px;border:1px solid var(--border);background:#f8fafc;border-radius:16px;padding:12px}
     .qr-grid{display:grid;grid-template-columns:180px 1fr;gap:12px;align-items:center}
@@ -276,11 +276,10 @@
   const DEFAULT_RULE_CARDS = [
     // Handicaps für spielprägende/oft beteiligte Einzelpersonen
     {id:'h_dom_assist_only', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', title:'Nur vorbereiten', text:'{name}: Du darfst selbst keine Tore erzielen, sondern nur vorbereiten.', why:'Lenkt häufig beteiligte Spieler:innen in Vorlagen und bindet andere stärker ein.'},
-    {id:'h_dom_3_contacts', active:true, type:'Handicap', target:'dominant', problem:'solo', strength:'stark', title:'Kontaktlimit', text:'{name}: Maximal 3 Ballkontakte, dann musst du abspielen.', why:'Begrenzt lange Dribblings und macht frühzeitige Orientierung notwendig.'},
+    {id:'h_dom_3_contacts', active:true, type:'Handicap', target:'dominant', problem:'solo', strength:'stark', sports:['football','floorball'], title:'Kontaktlimit', text:'{name}: Maximal 3 Ballkontakte, dann musst du abspielen.', why:'Begrenzt lange Dribblings und macht frühzeitige Orientierung notwendig.'},
     {id:'h_dom_pass_before_shot', active:true, type:'Handicap', target:'dominant', problem:'solo', strength:'mittel', title:'Erst passen, dann schießen', text:'{name}: Vor einem Torschuss musst du mindestens einmal abspielen.', why:'Verhindert direkte Alleingänge und bindet Mitspieler:innen ein.'},
-    {id:'h_dom_double_pass_goal', active:true, type:'Handicap', target:'dominant', problem:'passes', strength:'leicht', title:'Doppelpass-Tor', text:'{name}: Du darfst Tore nur nach einem Doppelpass erzielen.', why:'Belässt Torgefahr, koppelt sie aber an Kooperation.'},
     {id:'h_dom_no_two_shots', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'leicht', title:'Abschluss wechseln', text:'{name}: Du darfst nicht zweimal hintereinander den Torabschluss übernehmen.', why:'Verteilt Abschlüsse im Team.'},
-    {id:'h_dom_direct_play', active:true, type:'Handicap', target:'dominant', problem:'passes', strength:'stark', title:'Direktspiel-Auftrag', text:'{name}: Du darfst nur direkt oder nach einem Kontakt weiterspielen, nicht dribbeln.', why:'Erzwingt Orientierung vor der Ballannahme und stärkt das Passspiel.'},
+    {id:'h_dom_direct_play', active:true, type:'Handicap', target:'dominant', problem:'passes', strength:'stark', sports:['football','floorball'], title:'Direktspiel-Auftrag', text:'{name}: Du darfst den Ball nur annehmen und direkt oder nach höchstens einem Kontakt weiterspielen.', why:'Erzwingt Orientierung vor der Ballannahme und stärkt das Passspiel.'},
     {id:'h_dom_after_goal_assist', active:true, type:'Handicap', target:'dominant', problem:'solo', strength:'mittel', title:'Nach Tor: Vorlage', text:'{name}: Wenn du ein Tor erzielt hast, musst du beim nächsten Angriff zuerst eine Vorlage geben.', why:'Erfolg wird an Teamdienlichkeit gekoppelt.'},
     {id:'h_dom_third_person', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', title:'Zwei Mitspieler:innen einbeziehen', text:'{name}: Du darfst erst abschließen, wenn seit dem Ballgewinn zwei verschiedene Mitspieler:innen am Ball waren.', why:'Öffnet das Spiel und bindet mehrere Personen ein.'},
     {id:'h_dom_double_pass_only', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', title:'Abschluss nur nach Doppelpass', text:'{name}: Du darfst nur nach einem erkennbaren Doppelpass selbst abschließen.', why:'Starkes Handicap bei deutlicher Führung; die Person bleibt torgefährlich, muss aber kooperieren.'},
@@ -291,19 +290,17 @@
     {id:'p_low_goal_if_involved', active:true, type:'Procap', target:'low', problem:'solo', strength:'mittel', title:'Einbindungsbonus', text:'{team}: Das nächste Tor zählt doppelt, wenn {name} vorher am Angriff beteiligt war.', why:'Fördert Einbindung, bleibt aber an ein echtes Tor gekoppelt.'},
     {id:'p_low_goal_if_involved_once', active:true, type:'Procap', target:'low', problem:'any', strength:'leicht', title:'Einmaliger Einbindungsbonus', text:'{team}: Maximal einmal in dieser Runde zählt ein Tor doppelt, wenn {name} vorher am Angriff beteiligt war.', why:'Milder Bonus für mehr Beteiligung ohne Punkte-Farming.'},
     {id:'p_low_goal_if_involved_all', active:true, type:'Procap', target:'low', problem:'uneven', strength:'stark', title:'Starker Einbindungsbonus', text:'{team}: Jedes Tor zählt doppelt, wenn {name} vorher am Angriff beteiligt war.', why:'Starker Ausgleich bei deutlichem Rückstand und geringer Beteiligung.'},
-    {id:'p_low_pass_bonus', active:false, type:'Procap', target:'low', problem:'passes', strength:'leicht', title:'Pass-Bonus (deaktiviert)', text:'Ein gelungener Pass von {name} zählt als Zusatzpunkt für {team}.', why:'Deaktiviert: kann zu Punkte-Farming führen. Besser sind Tor-Boni mit Beteiligung.'},
     {id:'p_low_safe_zone', active:true, type:'Procap', target:'low', problem:'pressure', strength:'stark', title:'Sicherer Aufbau', text:'{name}: Wenn du in der eigenen Hälfte angespielt wirst, hast du 3 Sekunden Schutz.', why:'Gibt Sicherheit ohne zusätzliche Markierungen.'},
+    {id:'p_low_middle_third', active:true, type:'Procap', target:'low', problem:'pressure', strength:'stark', title:'Schutz im Mittelfeld', text:'{name}: Im mittleren Spielfelddrittel hast du nach der Ballannahme 3 Sekunden Schutz.', why:'Schafft eine sichere Anspielstation ohne zusätzliche Markierungen.'},
     {id:'p_low_first_pass', active:true, type:'Procap', target:'low', problem:'pressure', strength:'mittel', title:'Sicherer erster Pass', text:'{name}: Nach Ballgewinn darfst du den ersten Pass ungestört spielen.', why:'Erleichtert den Einstieg in den Angriff.'},
     {id:'p_low_goal_double', active:true, type:'Procap', target:'low', problem:'any', strength:'stark', title:'Doppeltes Tor', text:'Ein Tor von {name} zählt doppelt.', why:'Starker individueller Anreiz, eine wenig beteiligte Person gezielt in gute Abschlusssituationen zu bringen.'},
-    {id:'p_low_joker', active:true, type:'Procap', target:'low', problem:'pressure', strength:'stark', title:'Joker-Anspielstation', text:'{name} darf als Jokerperson jederzeit angespielt werden und beim ersten Kontakt nicht direkt attackiert werden.', why:'Schafft eine sichere, wiederkehrende Beteiligungsrolle.'},
 
     // Teamregeln gegen Soloaktionen und zu wenig Passspiel
     {id:'t_three_players', active:true, type:'Teamregel', target:'team', problem:'solo', strength:'stark', title:'Drei beteiligt', text:'{team}: Ein Tor zählt nur, wenn vorher mindestens 3 verschiedene Teammitglieder beteiligt waren.', why:'Reduziert Soloaktionen und erzwingt Beteiligung.'},
-    {id:'t_two_passes', active:true, type:'Teamregel', target:'team', problem:'passes', strength:'mittel', title:'Passpflicht', text:'{team}: Vor jedem Torabschluss müssen mindestens 2 Pässe gespielt werden.', why:'Macht Passspiel zum Spielziel.'},
+    {id:'t_two_passes', active:true, type:'Teamregel', target:'team', problem:'passes', strength:'mittel', title:'Passpflicht', text:'{team}: Vor jedem Torabschluss müssen mindestens 3 Pässe gespielt werden.', why:'Macht Passspiel zum Spielziel.'},
     {id:'t_no_solo_goal', active:true, type:'Teamregel', target:'team', problem:'solo', strength:'stark', title:'Kein Alleingang-Tor', text:'{team}: Tore nach Alleingang zählen nicht.', why:'Zwingt zur Kooperation vor dem Abschluss.'},
     {id:'t_side_change', active:true, type:'Teamregel', target:'team', problem:'passes', strength:'mittel', title:'Seitenwechsel', text:'{team}: Vor dem Torabschluss muss der Ball einmal die Seite wechseln.', why:'Öffnet Räume und verhindert Balltrauben.'},
     {id:'t_safety_pass', active:true, type:'Teamregel', target:'team', problem:'pressure', strength:'leicht', title:'Sicherheitspass', text:'{team}: Nach Ballgewinn muss zuerst ein Sicherheitspass gespielt werden.', why:'Beruhigt hektische Spielsituationen.'},
-    {id:'t_all_before_next_goal', active:true, type:'Teamregel', target:'team', problem:'solo', strength:'stark', title:'Alle vor dem Tor', text:'{team}: Ein Angriff ist erst abgeschlossen, wenn alle im Team einmal am Ball waren.', why:'Maximiert Beteiligung; nur für kurze Runden einsetzen.'},
 
     // Procaps und Ausgleichsregeln für zurückliegende/schwächere Teams
     {id:'a_leading_3_passes', active:true, type:'Ausgleichsregel', target:'leading', problem:'uneven', strength:'stark', title:'Führendes Team: 3 Pässe', text:'{team}: Ein Tor zählt nur nach mindestens 3 Pässen.', why:'Macht ein ungleiches Spiel gemeinsamer und spannender.'},
@@ -342,19 +339,16 @@
     {id:'fun_floorball_no_goal_zone', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', sports:['floorball'], title:'Kein Abschluss vor dem Tor', text:'{name}: Im letzten Drittel vor dem gegnerischen Tor darfst du nicht selbst abschließen, sondern nur vorbereiten.', why:'Starke, klar erkennbare Challenge ohne Zusatzmaterial.'},
     {id:'fun_ultimate_weak_throw', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['ultimate'], title:'Ungewohnte Wurfseite', text:'{name}: Du wirfst nur mit deiner ungewohnten Wurfseite.', why:'Spielerische sportartspezifische Herausforderung.'},
 
-    {id:'fb_dom_schiebepass', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['floorball'], title:'Schiebepass-Spielmacher:in', text:'{name}: Du darfst selbst keine Tore erzielen, sondern nur vorbereiten.', why:'Passt zu Floorball: Dominanz wird in sichere Vorlagen und Teamspiel umgelenkt.'},
     {id:'fb_dom_no_dribble_lane', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', sports:['floorball'], title:'Kein Laufweg-Solo', text:'{name}: Du darfst den Ball nicht durch das ganze Feld führen – nach spätestens 3 Kontakten muss ein Pass kommen.', why:'Begrenzt dominante Dribblings mit Schläger und fördert frühes Abspiel.'},
-    {id:'fb_low_stick_ready', active:true, type:'Procap', target:'low', problem:'any', strength:'mittel', sports:['floorball'], title:'Sichere Annahme', text:'{name}: Wenn dein Schläger sichtbar spielbereit am Boden ist, darfst du beim ersten Kontakt 3 Sekunden nicht attackiert werden.', why:'Gibt weniger eingebundenen SuS Zeit für Ballannahme und Entscheidung.'},
+    {id:'fb_low_stick_ready', active:true, type:'Procap', target:'low', problem:'any', strength:'mittel', sports:['floorball'], title:'Sichere Annahme', text:'{name}: Nach deiner Ballannahme hast du 3 Sekunden Schutz vor direktem Angriff.', why:'Gibt Zeit für Ballannahme und Entscheidung.'},
     {id:'fb_team_banktor_pass', active:true, type:'Teamregel', target:'team', problem:'any', strength:'mittel', sports:['floorball'], title:'Banktor nur nach Pass', text:'{team}: Ein Tor zählt nur, wenn der letzte Ball vor dem Abschluss ein Pass war.', why:'Verhindert reine Einzelaktionen auf kleine Tore.'},
 
     // Fußball-spezifisch
     {id:'fu_dom_weak_foot', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['football'], title:'Schwacher Fuß', text:'{name}: Tore zählen für dich nur mit deinem schwächeren Fuß.', why:'Bremst dominante Spieler:innen, ohne sie aus dem Spiel zu nehmen.'},
     {id:'fu_dom_two_touch', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['football'], title:'Zwei-Kontakt-Regel', text:'{name}: Du darfst maximal zwei Ballkontakte haben, dann muss ein Pass kommen.', why:'Fördert Orientierung vor der Ballannahme und schnelles Zusammenspiel.'},
     {id:'fu_low_goal_double', active:true, type:'Procap', target:'low', problem:'any', strength:'stark', sports:['football'], title:'Doppeltes Tor', text:'Ein Tor von {name} zählt doppelt.', why:'Starker Abschlussbonus zur gezielten Einbindung einer wenig beteiligten Person.'},
-    {id:'fu_team_no_direct_goal', active:true, type:'Teamregel', target:'team', problem:'any', strength:'mittel', sports:['football'], title:'Kein Direkt-Solo-Tor', text:'{team}: Ein Tor zählt nur, wenn vorher mindestens ein Pass gespielt wurde.', why:'Macht Fußball stärker zum Zusammenspiel.'},
 
     {id:'football_pair_handhold', active:true, type:'Handicap', target:'leading', problem:'uneven', strength:'mittel', sports:['football','handball'], title:'Handfassung-Duo', text:'{team}: Zwei Personen spielen eine Runde Hand in Hand. Nicht ziehen und andere nicht blockieren.', why:'Geeignet für Fußball- und Handball-Kleinfelder: Überlegenheit wird gebremst, Absprachen und gemeinsames Bewegen werden wichtiger.'},
-    {id:'football_pair_third_person', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['football'], title:'Zwei Mitspieler:innen einbeziehen', text:'{name}: Du darfst erst abschließen, wenn seit dem Ballgewinn zwei verschiedene Mitspieler:innen am Ball waren.', why:'Reduziert Zweier-Dominanz und fördert breitere Beteiligung.'},
 
     // Basketball-spezifisch
     {id:'bb_dom_weak_hand', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['basketball'], title:'Schwache Hand', text:'{name}: Du darfst in der nächsten Runde nur mit deiner schwächeren Hand dribbeln.', why:'Sportartspezifisches Handicap, das Dominanz reduziert und Technik variiert.'},
@@ -366,7 +360,6 @@
     {id:'hb_dom_no_goal', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['handball'], title:'Vorlagenrolle', text:'{name}: Du darfst selbst keine Tore erzielen, sondern nur vorbereiten.', why:'Handball bleibt dynamisch, dominante Abschlüsse werden aber umgelenkt.'},
     {id:'hb_dom_weak_hand_pass', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['handball'], title:'Schwächere Hand', text:'{name}: Du spielst Pässe in der nächsten Runde möglichst mit deiner schwächeren Hand.', why:'Sportartspezifische Erschwernis ohne zusätzlichen Körperkontakt.'},
     {id:'hb_low_free_throw', active:true, type:'Procap', target:'low', problem:'any', strength:'mittel', sports:['handball'], title:'Freier Aufbaupass', text:'{name}: Nach Ballannahme erhältst du 3 Sekunden Abstand für den nächsten Pass.', why:'Gibt weniger eingebundenen SuS Zeit im schnellen Wurfspiel.'},
-    {id:'hb_team_wing_involve', active:true, type:'Teamregel', target:'team', problem:'any', strength:'mittel', sports:['handball'], title:'Breite nutzen', text:'{team}: Ein Tor zählt nur, wenn vorher ein Pass über die Außenposition oder breite Zone gespielt wurde.', why:'Öffnet Räume und verhindert Spiel durch die Mitte.'},
 
     // Ultimate/Frisbee-spezifisch
     {id:'ul_dom_no_score', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['ultimate'], title:'Assistrolle', text:'{name}: Du darfst den Punkt nicht selbst fangen, aber den entscheidenden Pass vorbereiten.', why:'Lenkt dominante Läufer:innen in Spielaufbau und Übersicht.'},
@@ -381,6 +374,7 @@
   function defaultRuleByBase(id){ const base=baseRuleId(id); return DEFAULT_RULE_CARDS.find(r=>r.id===base); }
   function ruleSports(rule){ return rule.sports || defaultRuleByBase(rule.id)?.sports || ['general']; }
   function sanitizeRuleCardsForNormalFields(){
+    const obsoleteBases=new Set(['h_dom_double_pass_goal','p_low_pass_bonus','p_low_joker','t_all_before_next_goal','fb_dom_schiebepass','football_pair_third_person','hb_team_wing_involve','fu_team_no_direct_goal']);
     const patches={
       p_low_safe_zone:{title:'Sicherer Aufbau', text:'{name}: Wenn du in der eigenen Hälfte angespielt wirst, hast du 3 Sekunden Schutz.', why:'Gibt Sicherheit ohne zusätzliche Markierungen.'},
       a_trailing_joker_wall:{title:'Sicherer Neustart', text:'{team}: Nach Ballgewinn darf der erste Pass in die eigene Hälfte nicht direkt attackiert werden.', why:'Schafft eine sichere erste Anschlussaktion ohne Zusatzmaterial.'},
@@ -389,6 +383,7 @@
     };
     ruleCards=(ruleCards||[]).map(card=>{
       const base=baseRuleId(card.id);
+      if(obsoleteBases.has(base)) return {...card, active:false};
       if(patches[base]) return {...card, ...patches[base]};
       const text=String(card.text||'').toLowerCase();
       const title=String(card.title||'').toLowerCase();
@@ -408,7 +403,11 @@
         title.includes('einhand-schläger') ||
         title.includes('dritte person einbeziehen') ||
         text.includes('mindestens eine dritte person') ||
-        text.includes('über dich mindestens eine dritte person')
+        text.includes('über dich mindestens eine dritte person') ||
+        text.includes('nach jedem gegentor startet ihr mit ballbesitz') ||
+        text.includes('außenposition oder breite zone') ||
+        text.includes('alle im team einmal am ball') ||
+        title.includes('joker-anspielstation')
       ) return {...card, active:false};
       return card;
     });
@@ -924,16 +923,54 @@
   // ---------------- RULE CARD EDITOR ----------------
   function renderRuleEditor(){
     const c=$('rulesContainer'); if(!c) return;
-    if(!ruleCards?.length) ruleCards=cloneDefaultRules(); if($('sportProfile')) $('sportProfile').value=currentSport; if($('creativeRulesAllowed')) $('creativeRulesAllowed').checked=creativeRulesAllowed;
-    c.innerHTML = ruleCards.map(r=>`<div class="rule-card ${r.active===false?'inactive':''}">
-      <div class="row" style="justify-content:space-between">
-        <label class="row" style="gap:8px"><input type="checkbox" ${r.active!==false?'checked':''} onchange="toggleRuleActive('${r.id}', this.checked)"><span class="badge ${r.type==='Procap'?'procap':r.type==='Handicap'?'handicap':'team'}">${escapeHtml(r.type)}</span> <strong>${escapeHtml(r.title||'Ohne Titel')}</strong></label>
-        <div class="row"><button class="small" onclick="editRuleCard('${r.id}')">Bearbeiten</button><button class="small red" onclick="deleteRuleCard('${r.id}')">Löschen</button></div>
-      </div>
-      <div class="muted" style="margin:4px 0">Ziel: ${escapeHtml(ruleTargetLabel(r.target))} · Wirkung: ${escapeHtml(r.strength||'mittel')} · Sport: ${escapeHtml(ruleSports(r).map(sportLabel).join(', '))} · ${r.creative?'spielerisch/kreativ · ':''}${r.active===false?'inaktiv':'aktiv'}</div>
-      <div>${escapeHtml(r.text)}</div>
-      <div class="muted">${escapeHtml(r.why||'')}</div>
-    </div>`).join('');
+    if(!ruleCards?.length) ruleCards=cloneDefaultRules();
+    if($('sportProfile')) $('sportProfile').value=currentSport;
+    if($('creativeRulesAllowed')) $('creativeRulesAllowed').checked=creativeRulesAllowed;
+
+    const sportOrder=['general','football','handball','basketball','floorball','ultimate','multi'];
+    const strengthOrder=['stark','mittel','leicht'];
+    const strengthLabel={stark:'stark',mittel:'mittel',leicht:'leicht'};
+    const sportGroupLabel={
+      general:'Allgemein / Teamsport', football:'Fußball', handball:'Handball',
+      basketball:'Basketball', floorball:'Floorball / Unihockey', ultimate:'Ultimate / Frisbee',
+      multi:'Mehrere Sportarten'
+    };
+    function primarySportGroup(rule){
+      const sports=ruleSports(rule);
+      if(sports.includes('general')) return 'general';
+      if(sports.length===1) return sports[0];
+      return 'multi';
+    }
+    function cardHtml(r){
+      return `<div class="rule-card ${r.active===false?'inactive':''}">
+        <div class="row" style="justify-content:space-between">
+          <label class="row" style="gap:8px"><input type="checkbox" ${r.active!==false?'checked':''} onchange="toggleRuleActive('${r.id}', this.checked)"><span class="badge ${r.type==='Procap'?'procap':r.type==='Handicap'?'handicap':'team'}">${escapeHtml(r.type)}</span> <strong>${escapeHtml(r.title||'Ohne Titel')}</strong></label>
+          <div class="row"><button class="small" onclick="editRuleCard('${r.id}')">Bearbeiten</button><button class="small red" onclick="deleteRuleCard('${r.id}')">Löschen</button></div>
+        </div>
+        <div class="muted" style="margin:4px 0">Ziel: ${escapeHtml(ruleTargetLabel(r.target))} · Wirkung: ${escapeHtml(r.strength||'mittel')} · Sport: ${escapeHtml(ruleSports(r).map(sportLabel).join(', '))} · ${r.creative?'spielerisch/kreativ · ':''}${r.active===false?'inaktiv':'aktiv'}</div>
+        <div>${escapeHtml(r.text)}</div>
+        <div class="muted">${escapeHtml(r.why||'')}</div>
+      </div>`;
+    }
+
+    const groups={};
+    ruleCards.forEach(r=>{
+      const g=primarySportGroup(r);
+      if(!groups[g]) groups[g]=[];
+      groups[g].push(r);
+    });
+
+    c.innerHTML=sportOrder.filter(g=>groups[g]?.length).map(g=>{
+      const cards=groups[g];
+      const activeCount=cards.filter(r=>r.active!==false).length;
+      const strengthBlocks=strengthOrder.map(st=>{
+        const subset=cards.filter(r=>(r.strength||'mittel')===st)
+          .sort((a,b)=>Number(a.active===false)-Number(b.active===false) || String(a.type).localeCompare(String(b.type),'de') || String(a.title||'').localeCompare(String(b.title||''),'de'));
+        if(!subset.length) return '';
+        return `<div class="rule-strength-group"><div class="rule-strength-head">${strengthLabel[st]} (${subset.length})</div>${subset.map(cardHtml).join('')}</div>`;
+      }).join('');
+      return `<section class="rule-sport-group"><div class="rule-sport-head"><h3>${sportGroupLabel[g]||sportLabel(g)}</h3><span class="pill">${activeCount}/${cards.length} aktiv</span></div>${strengthBlocks}</section>`;
+    }).join('');
   }
   function ruleTargetLabel(v){ return ({dominant:'Person war oft beteiligt', low:'Person kam wenig ins Spiel', team:'Teamregel', leading:'führendes Team', trailing:'zurückliegendes Team', all:'Zusatzchallenge'}[v]||v||''); }
   function problemLabel(v){ return ({any:'egal', solo:'Soloaktionen', passes:'Passspiel', pressure:'Druck', uneven:'unausgeglichen', rules:'Regelstreit', ok:'alle beteiligt'}[v]||v||''); }
@@ -1198,7 +1235,7 @@
   function escapeAttr(s){ return escapeHtml(s).replace(/`/g,'&#96;'); }
 
   // Init
-  loadLocal(); if(localStorage.getItem('fbph_default_sport_v31')!=='1'){ currentSport='general'; localStorage.setItem('fbph_current_sport','general'); localStorage.setItem('fbph_default_sport_v31','1'); saveLocal(); } if(!ruleCards || !ruleCards.length) ruleCards=cloneDefaultRules(); mergeMissingDefaultRules(); sanitizeRuleCardsForNormalFields(); refreshClassSelect(); $('firebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; $('joinFirebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; renderAll(); if($('sportProfile')) $('sportProfile').value=currentSport; if($('creativeRulesAllowed')) $('creativeRulesAllowed').checked=creativeRulesAllowed; updateModePill(); updateJoinFieldSelect(); handleDeepLinkJoin();
+  loadLocal(); if(localStorage.getItem('fbph_default_sport_v33')!=='1'){ currentSport='general'; localStorage.setItem('fbph_current_sport','general'); localStorage.setItem('fbph_default_sport_v33','1'); saveLocal(); } if(!ruleCards || !ruleCards.length) ruleCards=cloneDefaultRules(); mergeMissingDefaultRules(); sanitizeRuleCardsForNormalFields(); refreshClassSelect(); $('firebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; $('joinFirebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; renderAll(); if($('sportProfile')) $('sportProfile').value=currentSport; if($('creativeRulesAllowed')) $('creativeRulesAllowed').checked=creativeRulesAllowed; updateModePill(); updateJoinFieldSelect(); handleDeepLinkJoin();
 
 </script>
 </body>
