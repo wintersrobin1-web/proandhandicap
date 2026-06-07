@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Teamsport Pro- und Handicap Generator – Offline & Live v29</title>
+  <title>Teamsport Pro- und Handicap Generator – Offline & Live v30</title>
   <style>
     :root{
       --green:#16a34a; --green-dark:#15803d; --green-soft:#ecfdf5;
@@ -203,7 +203,7 @@
         <h2>Pro-/Handicap bearbeiten</h2>
         <label>Sportart-Profil<br><select id="sportProfile" style="width:100%" onchange="setSportProfile(this.value)"><option value="general">Allgemein / Teamsport</option><option value="floorball">Floorball / Unihockey</option><option value="football">Fußball</option><option value="basketball">Basketball</option><option value="handball">Handball</option><option value="ultimate">Ultimate / Frisbee</option></select></label>
         <div class="row" style="margin-top:8px"><button class="blue" onclick="applySportPreset()">Geeignete Karten für Sportart aktivieren</button><button class="ghost" onclick="activateAllRules()">Alle Karten aktivieren</button></div>
-        <label class="row" style="margin-top:12px;gap:9px;align-items:flex-start"><input type="checkbox" id="creativeRulesAllowed" onchange="setCreativeRulesAllowed(this.checked)"><span><strong>Spielerische/kreative Handicaps erlauben</strong><br><span class="muted">Dann kann die App zusätzlich passende Spaß-Challenges der gewählten Sportart zufällig auswählen.</span></span></label>
+        <label class="row" style="margin-top:12px;gap:9px;align-items:flex-start"><input type="checkbox" id="creativeRulesAllowed" onchange="setCreativeRulesAllowed(this.checked)"><span><strong>Spielerische/kreative Handicaps erlauben</strong><br><span class="muted">Dann werden bei passenden Situationen mit erhöhter Wahrscheinlichkeit sichere, spielerische Challenges der gewählten Sportart ausgewählt.</span></span></label>
         <div class="notice" style="margin-top:10px">Regelkarten anpassen, neu erstellen oder deaktivieren. Die App wählt anschließend anhand von Spielstand, Beteiligung und aktiviertem Kartenpool passende Karten aus. In Regeltexten kannst du die Platzhalter {name}, {team} und {otherTeam} verwenden.</div>
         <h3>Neue / ausgewählte Karte</h3>
         <input type="hidden" id="ruleId" />
@@ -369,7 +369,20 @@
       const base=baseRuleId(card.id);
       if(patches[base]) return {...card, ...patches[base]};
       const text=String(card.text||'').toLowerCase();
-      if(text.includes('markierte passzone') || text.includes('außenzone') || text.includes('spielfeldrand anspielen')) return {...card, active:false};
+      const title=String(card.title||'').toLowerCase();
+      // Alte oder didaktisch unklare Karten aus früheren Versionen konsequent deaktivieren.
+      if(
+        text.includes('markierte passzone') ||
+        text.includes('außenzone') ||
+        text.includes('spielfeldrand anspielen') ||
+        text.includes('nur flache pässe') ||
+        text.includes('nur flach passen') ||
+        title.includes('flachpass') ||
+        title.includes('flache pässe') ||
+        title.includes('dritte person einbeziehen') ||
+        text.includes('mindestens eine dritte person') ||
+        text.includes('über dich mindestens eine dritte person')
+      ) return {...card, active:false};
       return card;
     });
   }
@@ -690,12 +703,25 @@
   function pickRule({target, desired='mittel', exclude=[], avoidNoGoal=false, maxStrength=null}){
     const desiredVal=strengthScore(desired);
     const maxVal=maxStrength ? strengthScore(maxStrength) : null;
-    const candidates=(ruleCards||[]).filter(r=>r.active!==false && r.target===target && !exclude.includes(r.id) && (!r.creative || creativeRulesAllowed) && (ruleSports(r).includes('general') || ruleSports(r).includes(currentSport) || currentSport==='all') && (!avoidNoGoal || !isNoGoalRule(r)) && (!maxVal || strengthScore(r.strength)<=maxVal)); 
+    const candidates=(ruleCards||[]).filter(r=>r.active!==false && r.target===target && !exclude.includes(r.id) && (!r.creative || creativeRulesAllowed) && (ruleSports(r).includes('general') || ruleSports(r).includes(currentSport) || currentSport==='all') && (!avoidNoGoal || !isNoGoalRule(r)) && (!maxVal || strengthScore(r.strength)<=maxVal));
     if(!candidates.length) return null;
-    // Innerhalb sinnvoller Karten wird bewusst zufällig gewählt, damit nicht jede Runde dieselbe Karte erscheint.
+
+    // Zuerst nach passender Stärke filtern.
     const scored=candidates.map(r=>({r, d:Math.abs(strengthScore(r.strength)-desiredVal)}));
     const min=Math.min(...scored.map(x=>x.d));
-    const pool=scored.filter(x=>x.d<=min+1).map(x=>x.r);
+    let pool=scored.filter(x=>x.d<=min+1).map(x=>x.r);
+
+    // Wenn spielerische Handicaps erlaubt sind, erhalten passende kreative Karten
+    // eine echte Auswahlchance statt nur im großen Gesamtpool unterzugehen.
+    if(creativeRulesAllowed){
+      const creativePool=pool.filter(r=>r.creative===true);
+      const standardPool=pool.filter(r=>r.creative!==true);
+      if(creativePool.length && (target==='dominant' || target==='leading')){
+        const useCreative=Math.random()<0.45; // ca. 45 % Chance bei passender Situation
+        pool=useCreative ? creativePool : (standardPool.length ? standardPool : creativePool);
+      }
+    }
+
     return pool[Math.floor(Math.random()*pool.length)];
   }
   function addRuleRecommendation(rec, rule, ctx){
@@ -1134,7 +1160,7 @@
   function escapeAttr(s){ return escapeHtml(s).replace(/`/g,'&#96;'); }
 
   // Init
-  loadLocal(); if(localStorage.getItem('fbph_default_sport_v29')!=='1'){ currentSport='general'; localStorage.setItem('fbph_current_sport','general'); localStorage.setItem('fbph_default_sport_v29','1'); saveLocal(); } if(!ruleCards || !ruleCards.length) ruleCards=cloneDefaultRules(); mergeMissingDefaultRules(); refreshClassSelect(); $('firebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; $('joinFirebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; renderAll(); if($('sportProfile')) $('sportProfile').value=currentSport; if($('creativeRulesAllowed')) $('creativeRulesAllowed').checked=creativeRulesAllowed; updateModePill(); updateJoinFieldSelect(); handleDeepLinkJoin();
+  loadLocal(); if(localStorage.getItem('fbph_default_sport_v30')!=='1'){ currentSport='general'; localStorage.setItem('fbph_current_sport','general'); localStorage.setItem('fbph_default_sport_v30','1'); saveLocal(); } if(!ruleCards || !ruleCards.length) ruleCards=cloneDefaultRules(); mergeMissingDefaultRules(); sanitizeRuleCardsForNormalFields(); refreshClassSelect(); $('firebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; $('joinFirebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; renderAll(); if($('sportProfile')) $('sportProfile').value=currentSport; if($('creativeRulesAllowed')) $('creativeRulesAllowed').checked=creativeRulesAllowed; updateModePill(); updateJoinFieldSelect(); handleDeepLinkJoin();
 
 </script>
 </body>
