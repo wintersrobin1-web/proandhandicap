@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Teamsport Pro- und Handicap Generator – Offline & Live v30</title>
+  <title>Teamsport Pro- und Handicap Generator – Offline & Live v31</title>
   <style>
     :root{
       --green:#16a34a; --green-dark:#15803d; --green-soft:#ecfdf5;
@@ -312,12 +312,22 @@
     // Spielerische/kreative Handicaps – nur wenn die Option aktiviert ist
     {id:'fun_general_one_leg', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', sports:['general','football','basketball','handball'], title:'Einbein-Challenge', text:'{name}: Du bewegst dich in dieser Runde nur hüpfend auf einem Bein. Bei Unsicherheit darfst du sofort normal weiterlaufen.', why:'Spielerische starke Erschwernis für kontaktarme Kleinfelder.'},
     {id:'fun_general_one_eye', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['general','football','basketball','handball','ultimate'], title:'Ein-Auge-Challenge', text:'{name}: Du spielst die nächste Runde mit einem geschlossenen Auge.', why:'Verändert Wahrnehmung und Orientierung deutlich.'},
+    {id:'fun_general_own_half', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['general','football','basketball','handball','floorball','ultimate'], title:'Rückraum-Challenge', text:'{name}: Du darfst die eigene Spielfeldhälfte nicht verlassen und musst von dort aus vorbereiten.', why:'Spielerische Raumrolle, die auf jedem normalen Spielfeld funktioniert.'},
+    {id:'fun_general_no_goal_area', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', sports:['general','football','basketball','handball','floorball'], title:'Abschluss-Sperre vor dem Tor', text:'{name}: Im letzten Drittel vor dem gegnerischen Tor darfst du nicht selbst abschließen.', why:'Klare starke Challenge ohne zusätzliche Markierungen.'},
+    {id:'fun_general_assist_after_touch', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['general','football','basketball','handball','floorball','ultimate'], title:'Erst passen, dann wieder angreifen', text:'{name}: Nach jedem eigenen Ballkontakt musst du zunächst abspielen, bevor du den Ball wieder bekommen darfst.', why:'Unterbricht dominante Ballfolgen und fördert Einbindung.'},
     {id:'fun_football_handhold', active:true, creative:true, type:'Handicap', target:'leading', problem:'uneven', strength:'mittel', sports:['football'], title:'Hand-in-Hand-Duo', text:'{team}: Zwei Personen spielen bis zum nächsten Tor Hand in Hand. Kein Ziehen oder Festhalten gegen andere.', why:'Bremst ein führendes Team spielerisch und verlangt Abstimmung.'},
     {id:'fun_football_weak_foot_only', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['football'], title:'Nur schwächerer Fuß', text:'{name}: Du darfst den Ball nur mit deinem schwächeren Fuß spielen.', why:'Spielerische technische Herausforderung für häufig beteiligte Personen.'},
+    {id:'fun_football_walk_only', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', sports:['football'], title:'Nur gehen', text:'{name}: Mit Ball am Fuß darfst du nur gehen, nicht laufen.', why:'Bremst starke Dribblings deutlich und fördert frühzeitiges Abspielen.'},
+    {id:'fun_football_no_own_goal', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['football'], title:'Vorlagen-Challenge', text:'{name}: Du darfst selbst keine Tore erzielen, sondern nur vorbereiten.', why:'Lenkt eine häufig beteiligte Person in die Vorlagenrolle.'},
     {id:'fun_basketball_weak_arm', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['basketball'], title:'Schwache Hand', text:'{name}: Du dribbelst und passt nur mit deiner schwächeren Hand.', why:'Sportartspezifische kreative Erschwernis.'},
+    {id:'fun_basketball_no_dribble', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', sports:['basketball'], title:'Ohne Dribbling', text:'{name}: Du darfst nicht dribbeln, sondern nur passen, fangen und dich freilaufen.', why:'Starke spielerische Einschränkung für dominante Personen.'},
+    {id:'fun_basketball_bounce_pass', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['basketball'], title:'Nur Bodenpässe', text:'{name}: Deine Pässe müssen als Bodenpass gespielt werden.', why:'Kreative technische Challenge mit klarer Beobachtbarkeit.'},
     {id:'fun_handball_weak_arm', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['handball'], title:'Schwacher Arm', text:'{name}: Du passt und wirfst nur mit deinem schwächeren Arm.', why:'Sportartspezifische kreative Erschwernis.'},
+    {id:'fun_handball_no_dribble', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['handball'], title:'Ohne Prellen', text:'{name}: Du darfst nicht prellen und musst über Pässe und Freilaufen spielen.', why:'Fördert schnelles Zusammenspiel und reduziert dominante Einzelaktionen.'},
+    {id:'fun_handball_bounce_pass', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['handball'], title:'Nur Bodenpässe', text:'{name}: Du darfst nur Bodenpässe spielen.', why:'Leicht erkennbare spielerische Technik-Challenge.'},
     {id:'fun_floorball_weak_side', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['floorball'], title:'Ungewohnte Schlägerseite', text:'{name}: Du führst und spielst den Ball nur auf deiner ungewohnten Schlägerseite.', why:'Spielerische technische Herausforderung ohne Zusatzmaterial.'},
-    {id:'fun_floorball_one_hand', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', sports:['floorball'], title:'Einhand-Schläger', text:'{name}: Du führst den Schläger nur mit einer Hand und spielst kontrolliert ohne Ausholen.', why:'Deutliche spielerische Erschwernis für dominante Personen.'},
+    {id:'fun_floorball_half_only', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['floorball'], title:'Eigene-Hälfte-Challenge', text:'{name}: Du darfst die eigene Spielfeldhälfte nicht verlassen und nur aus dem Rückraum vorbereiten.', why:'Bremst dominante Laufwege, bleibt auf jedem normalen Spielfeld umsetzbar.'},
+    {id:'fun_floorball_no_goal_zone', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', sports:['floorball'], title:'Kein Abschluss vor dem Tor', text:'{name}: Im letzten Drittel vor dem gegnerischen Tor darfst du nicht selbst abschließen, sondern nur vorbereiten.', why:'Starke, klar erkennbare Challenge ohne Zusatzmaterial.'},
     {id:'fun_ultimate_weak_throw', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['ultimate'], title:'Ungewohnte Wurfseite', text:'{name}: Du wirfst nur mit deiner ungewohnten Wurfseite.', why:'Spielerische sportartspezifische Herausforderung.'},
 
     {id:'fb_dom_schiebepass', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['floorball'], title:'Schiebepass-Spielmacher:in', text:'{name}: Du darfst selbst keine Tore erzielen, sondern nur vorbereiten.', why:'Passt zu Floorball: Dominanz wird in sichere Vorlagen und Teamspiel umgelenkt.'},
@@ -372,13 +382,18 @@
       const title=String(card.title||'').toLowerCase();
       // Alte oder didaktisch unklare Karten aus früheren Versionen konsequent deaktivieren.
       if(
-        text.includes('markierte passzone') ||
+        text.includes('passzone') ||
+        title.includes('passzone') ||
+        text.includes('markierte zone') ||
+        title.includes('markierte zone') ||
         text.includes('außenzone') ||
         text.includes('spielfeldrand anspielen') ||
         text.includes('nur flache pässe') ||
         text.includes('nur flach passen') ||
         title.includes('flachpass') ||
         title.includes('flache pässe') ||
+        text.includes('schläger nur mit einer hand') ||
+        title.includes('einhand-schläger') ||
         title.includes('dritte person einbeziehen') ||
         text.includes('mindestens eine dritte person') ||
         text.includes('über dich mindestens eine dritte person')
@@ -717,7 +732,7 @@
       const creativePool=pool.filter(r=>r.creative===true);
       const standardPool=pool.filter(r=>r.creative!==true);
       if(creativePool.length && (target==='dominant' || target==='leading')){
-        const useCreative=Math.random()<0.45; // ca. 45 % Chance bei passender Situation
+        const useCreative=Math.random()<0.85; // hohe Chance auf eine spielerische Karte, wenn aktiviert
         pool=useCreative ? creativePool : (standardPool.length ? standardPool : creativePool);
       }
     }
@@ -1160,7 +1175,7 @@
   function escapeAttr(s){ return escapeHtml(s).replace(/`/g,'&#96;'); }
 
   // Init
-  loadLocal(); if(localStorage.getItem('fbph_default_sport_v30')!=='1'){ currentSport='general'; localStorage.setItem('fbph_current_sport','general'); localStorage.setItem('fbph_default_sport_v30','1'); saveLocal(); } if(!ruleCards || !ruleCards.length) ruleCards=cloneDefaultRules(); mergeMissingDefaultRules(); sanitizeRuleCardsForNormalFields(); refreshClassSelect(); $('firebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; $('joinFirebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; renderAll(); if($('sportProfile')) $('sportProfile').value=currentSport; if($('creativeRulesAllowed')) $('creativeRulesAllowed').checked=creativeRulesAllowed; updateModePill(); updateJoinFieldSelect(); handleDeepLinkJoin();
+  loadLocal(); if(localStorage.getItem('fbph_default_sport_v31')!=='1'){ currentSport='general'; localStorage.setItem('fbph_current_sport','general'); localStorage.setItem('fbph_default_sport_v31','1'); saveLocal(); } if(!ruleCards || !ruleCards.length) ruleCards=cloneDefaultRules(); mergeMissingDefaultRules(); sanitizeRuleCardsForNormalFields(); refreshClassSelect(); $('firebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; $('joinFirebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; renderAll(); if($('sportProfile')) $('sportProfile').value=currentSport; if($('creativeRulesAllowed')) $('creativeRulesAllowed').checked=creativeRulesAllowed; updateModePill(); updateJoinFieldSelect(); handleDeepLinkJoin();
 
 </script>
 </body>
