@@ -89,7 +89,8 @@
           <label>Spielzeit/Runde<br><select id="roundMinutes" style="width:100%"><option value="3">3 Min</option><option value="4" selected>4 Min</option><option value="5">5 Min</option><option value="6">6 Min</option></select></label>
           <label>Gruppenlogik<br><select id="teamMode" style="width:100%"><option value="balanced">grob ausgleichen</option><option value="random">zufällig</option></select></label>
         </div>
-        <button class="primary full" style="margin-top:12px" onclick="generateTeams()">Teams & Felder erstellen</button>
+        <button class="primary full" style="margin-top:12px" onclick="generateTeams()">Teams & Felder neu mischen</button>
+        <button class="ghost full" style="margin-top:8px" onclick="rotatePairings()">Paarungen rotieren</button>
         <div class="notice" style="margin-top:10px">Tipp: Wenn die Gruppengröße nicht aufgeht, werden automatisch Wechselspieler:innen den Teams zugeordnet. Nach Toren erinnert die App diskret an Rotation.</div>
         <div class="notice" style="margin-top:8px">Datenschutz: Für Live-Sessions besser Kürzel/Nummern nutzen und nach der Stunde löschen.</div>
       </div>
@@ -251,6 +252,7 @@
   let students = [];
   let teams = [];
   let fields = [];
+  let pairingRound = 0;
   let ruleCards = [];
   let currentClassName = '';
   let currentSport = localStorage.getItem('fbph_current_sport') || 'general';
@@ -423,9 +425,9 @@
 
   const $ = (id) => document.getElementById(id);
   let playerOnlyMode = false;
-  const saveLocal = () => localStorage.setItem('fbph_state', JSON.stringify({students, teams, fields, ruleCards, currentClassName, currentSport, creativeRulesAllowed, adaptiveRulesEnabled}));
+  const saveLocal = () => localStorage.setItem('fbph_state', JSON.stringify({students, teams, fields, pairingRound, ruleCards, currentClassName, currentSport, creativeRulesAllowed, adaptiveRulesEnabled}));
   const loadLocal = () => {
-    try { const s = JSON.parse(localStorage.getItem('fbph_state') || '{}'); students=s.students||[]; teams=s.teams||[]; fields=s.fields||[]; ruleCards=s.ruleCards||JSON.parse(localStorage.getItem('fbph_rule_cards')||'null')||cloneDefaultRules(); currentClassName=s.currentClassName||''; currentSport=s.currentSport||localStorage.getItem('fbph_current_sport')||'general'; creativeRulesAllowed = typeof s.creativeRulesAllowed==='boolean' ? s.creativeRulesAllowed : (localStorage.getItem('fbph_creative_rules_allowed')==='true'); adaptiveRulesEnabled = typeof s.adaptiveRulesEnabled==='boolean' ? s.adaptiveRulesEnabled : (localStorage.getItem('fbph_adaptive_rules_enabled')!=='false'); sanitizeRuleCardsForNormalFields(); } catch(e){}
+    try { const s = JSON.parse(localStorage.getItem('fbph_state') || '{}'); students=s.students||[]; teams=s.teams||[]; fields=s.fields||[]; pairingRound=Number.isInteger(s.pairingRound)?s.pairingRound:0; ruleCards=s.ruleCards||JSON.parse(localStorage.getItem('fbph_rule_cards')||'null')||cloneDefaultRules(); currentClassName=s.currentClassName||''; currentSport=s.currentSport||localStorage.getItem('fbph_current_sport')||'general'; creativeRulesAllowed = typeof s.creativeRulesAllowed==='boolean' ? s.creativeRulesAllowed : (localStorage.getItem('fbph_creative_rules_allowed')==='true'); adaptiveRulesEnabled = typeof s.adaptiveRulesEnabled==='boolean' ? s.adaptiveRulesEnabled : (localStorage.getItem('fbph_adaptive_rules_enabled')!=='false'); sanitizeRuleCardsForNormalFields(); } catch(e){}
   };
 
   function makeId(){ return Math.random().toString(36).slice(2,10); }
@@ -501,44 +503,103 @@
   }
 
   // ---------------- TEAMS/FIELDS ----------------
+  function shuffleArray(arr){
+    const a=[...arr];
+    for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+    return a;
+  }
+  function teamBalanceScore(candidateTeams){
+    const avgs=candidateTeams.map(t=>t.length ? t.reduce((sum,s)=>sum+(s.skill||5),0)/t.length : 0);
+    const mean=avgs.reduce((a,b)=>a+b,0)/(avgs.length||1);
+    const variance=avgs.reduce((sum,v)=>sum+(v-mean)**2,0)/(avgs.length||1);
+    const sizes=candidateTeams.map(t=>t.length);
+    const sizePenalty=(Math.max(...sizes)-Math.min(...sizes))*3;
+    return variance+sizePenalty;
+  }
+  function createRandomBalancedGroups(active,numTeams){
+    const candidates=[];
+    for(let k=0;k<500;k++){
+      const groups=Array.from({length:numTeams},()=>[]);
+      const shuffled=shuffleArray(active);
+      shuffled.forEach((student,i)=>groups[i%numTeams].push(student));
+      candidates.push({groups,score:teamBalanceScore(groups)});
+    }
+    candidates.sort((a,b)=>a.score-b.score);
+    const top=candidates.slice(0,Math.min(20,candidates.length));
+    return top[Math.floor(Math.random()*top.length)].groups;
+  }
   window.generateTeams = function(){
     try{
       const active=students.filter(s=>!s.absent);
       if(active.length<4) return notify('Zu wenige aktive SuS.', true);
       const onField=Math.max(2, parseInt($('teamSize')?.value)||3);
       const requestedFields=Math.max(1, parseInt($('fieldCount')?.value)||3);
-      // Feldanzahl ist jetzt leitend: Pro Kleinfeld entstehen zwei Teams; übrige SuS werden als Wechselspieler:innen in diese Teams verteilt.
-      // Mindestens 2 SuS pro Team müssen vorhanden sein, sonst wird die tatsächliche Feldzahl reduziert.
       const actualFields=Math.max(1, Math.min(requestedFields, Math.floor(active.length/4) || 1));
       const numTeams=actualFields*2;
       const mode=$('teamMode')?.value || 'balanced';
-      let list=[...active];
-      if(mode==='balanced') list.sort((a,b)=>(b.skill||5)-(a.skill||5)); else list.sort(()=>Math.random()-.5);
-      teams=Array.from({length:numTeams},(_,i)=>({id:makeId(), name:`Team ${i+1}`, students:[], onFieldSize:onField}));
-      if(mode==='balanced'){
-        list.forEach((s,i)=>{ const idx = Math.floor(i/numTeams)%2===0 ? i%numTeams : numTeams-1-(i%numTeams); teams[idx].students.push(s); });
-      } else {
-        list.forEach((s,i)=>teams[i%numTeams].students.push(s));
-      }
+      const groups = mode==='balanced'
+        ? createRandomBalancedGroups(active,numTeams)
+        : (()=>{ const g=Array.from({length:numTeams},()=>[]); shuffleArray(active).forEach((s,i)=>g[i%numTeams].push(s)); return g; })();
+      teams=groups.map((group,i)=>({id:makeId(), name:`Team ${i+1}`, students:group, onFieldSize:onField}));
+      pairingRound=0;
       createFields(actualFields, onField);
       selectedJoinedFieldId='';
       renderAll();
       updateJoinFieldSelect();
+      pushLiveTeamsAndFields();
       const hasSubs=teams.some(t=>t.students.length>onField);
-      notify(`${teams.length} Teams und ${fields.length} Kleinfeld(er) erstellt.${hasSubs?' Wechselspieler:innen sind automatisch zugeteilt.':''}`);
+      notify(`${teams.length} Teams neu gemischt und ${fields.length} Kleinfeld(er) erstellt.${hasSubs?' Wechselspieler:innen sind automatisch zugeteilt.':''}`);
     }catch(e){
       console.error(e);
       notify('Teams konnten nicht erstellt werden: '+(e.message||e), true);
     }
   };
+  function roundRobinPairs(teamList, round){
+    const ids=teamList.map(t=>t.id);
+    if(ids.length%2===1) ids.push(null);
+    const n=ids.length;
+    const fixed=ids[0];
+    const rotating=ids.slice(1);
+    const r=((round%(n-1))+(n-1))%(n-1);
+    const rotated=rotating.slice(r).concat(rotating.slice(0,r));
+    const arranged=[fixed,...rotated];
+    const pairs=[];
+    for(let i=0;i<n/2;i++){
+      const a=arranged[i], b=arranged[n-1-i];
+      if(a && b) pairs.push([a,b]);
+    }
+    return pairs;
+  }
+  function newFieldState(index, ta, tb, onField, prior=null){
+    return {id:prior?.id||makeId(), index, name:`Kleinfeld ${index+1}`, teamA:ta, teamB:tb, onFieldSize:onField,
+      rotationAfterGoal:((getTeam(ta)?.students?.length||0)>onField || (getTeam(tb)?.students?.length||0)>onField), rotationHint:'', rotationHintAtMs:null,
+      scoreA:0, scoreB:0, round:(prior?.round||0)+1, recommendations:[], lastObservation:null,
+      observationDraft:{domA:['',''],lowA:['',''],domB:['',''],lowB:['','']},
+      timer:{remaining:getDefaultTimerSeconds(), running:false, startedAt:null, startedAtMs:null, endsAtMs:null}, updatedAt:nowIso(), updatedAtMs:nowMs()};
+  }
   function createFields(fieldCount=null, onFieldSize=null){
     const fc=fieldCount ?? (parseInt($('fieldCount').value)||3);
     const onField=onFieldSize ?? (parseInt($('teamSize')?.value)||3);
-    fields=[];
-    for(let i=0;i<Math.min(fc, Math.floor(teams.length/2)); i++){
-      const ta=teams[i*2]?.id, tb=teams[i*2+1]?.id;
-      fields.push({id:makeId(), index:i, name:`Kleinfeld ${i+1}`, teamA:ta, teamB:tb, onFieldSize:onField, rotationAfterGoal:((getTeam(ta)?.students?.length||0)>onField || (getTeam(tb)?.students?.length||0)>onField), rotationHint:'', rotationHintAtMs:null, scoreA:0, scoreB:0, round:1, recommendations:[], lastObservation:null, observationDraft:{domA:['',''],lowA:['',''],domB:['',''],lowB:['','']}, timer:{remaining:getDefaultTimerSeconds(), running:false, startedAt:null, startedAtMs:null, endsAtMs:null}, updatedAt:nowIso(), updatedAtMs:nowMs()});
-    }
+    const pairs=roundRobinPairs(teams,pairingRound).slice(0,fc);
+    fields=pairs.map((pair,i)=>newFieldState(i,pair[0],pair[1],onField,null));
+  }
+  window.rotatePairings = function(){
+    if(teams.length<4) return notify('Erst Teams erstellen.', true);
+    const maxRounds=Math.max(1,teams.length-1);
+    pairingRound=(pairingRound+1)%maxRounds;
+    const onField=Math.max(2, parseInt($('teamSize')?.value)||3);
+    const fc=Math.max(1,Math.min(parseInt($('fieldCount')?.value)||3,Math.floor(teams.length/2)));
+    const pairs=roundRobinPairs(teams,pairingRound).slice(0,fc);
+    fields=pairs.map((pair,i)=>newFieldState(i,pair[0],pair[1],onField,fields[i]));
+    selectedJoinedFieldId='';
+    renderAll(); updateJoinFieldSelect(); pushLiveTeamsAndFields();
+    notify(`Neue Paarungen erstellt (Runde ${pairingRound+1} von ${maxRounds}).`);
+  };
+  async function pushLiveTeamsAndFields(){
+    saveLocal();
+    if(!currentRoom || !firebaseReady) return;
+    try{ await fb.updateDoc(fb.doc(db,'teamsportSessions',currentRoom), {teams, fields, 'settings.pairingRound':pairingRound, updatedAt:nowIso()}); }
+    catch(e){ console.warn(e); notify('Live-Speichern fehlgeschlagen: '+(e.code||e.message||e), true); }
   }
   function getTeam(id){ return teams.find(t=>t.id===id); }
   function teamRoleHint(t, onField){
@@ -923,7 +984,7 @@
   window.globalResetTimers=function(){
     if(!fields.length) return notify('Noch keine Felder vorhanden.', true);
     const base=getDefaultTimerSeconds();
-    fields.forEach(f=>{ f.timer={remaining:base, running:false, startedAt:null, startedAtMs:null, endsAtMs:null}; markFieldChanged(f); });
+    fields.forEach(f=>{ f.timer={remaining:base, running:false, startedAt:null, startedAtMs:null, endsAtMs:null}; f.scoreA=0; f.scoreB=0; markFieldChanged(f); });
     renderGameFields(); renderFieldsSummary(); renderDisplayOverview(); refreshJoinedField(); updateTimerDisplays(); pushLiveFields();
   };
 
@@ -1172,7 +1233,7 @@
     if(!teams.length || !fields.length) return notify('Erst Teams/Felder erstellen.', true);
     currentRoom = ($('roomCode').value.trim().toUpperCase() || `TEAM-${makeCode(3)}`).replace(/\s+/g,'-'); $('roomCode').value=currentRoom;
     fields = fields.map(f => ({...f, timer: ensureFieldTimer(f), updatedAtMs: f.updatedAtMs || nowMs(), updatedAt: f.updatedAt || nowIso()}));
-    const session={roomCode:currentRoom, className:currentClassName||$('className').value||'Klasse', teacherPin, createdAt:nowIso(), updatedAt:nowIso(), expiresAt:new Date(Date.now()+4*60*60*1000).toISOString(), students, teams, fields, ruleCards, settings:{roundMinutes:parseInt($('roundMinutes').value)||4, fieldCount:parseInt($('fieldCount').value)||3, currentSport, creativeRulesAllowed, adaptiveRulesEnabled}};
+    const session={roomCode:currentRoom, className:currentClassName||$('className').value||'Klasse', teacherPin, createdAt:nowIso(), updatedAt:nowIso(), expiresAt:new Date(Date.now()+4*60*60*1000).toISOString(), students, teams, fields, ruleCards, settings:{roundMinutes:parseInt($('roundMinutes').value)||4, fieldCount:parseInt($('fieldCount').value)||3, pairingRound, currentSport, creativeRulesAllowed, adaptiveRulesEnabled}};
     await fb.setDoc(fb.doc(db,'teamsportSessions',currentRoom), session);
     subscribeRoom(currentRoom); updateModePill(); $('roomInfo').innerHTML=`Raumcode: <span class="copy">${currentRoom}</span> · PIN lokal: <span class="copy">${teacherPin}</span> · Ablauf: ${new Date(session.expiresAt).toLocaleTimeString('de-DE')}`; notify('Live-Session erstellt.'); showIpadJoinAccess();
   };
@@ -1194,7 +1255,7 @@
     if(liveUnsub) liveUnsub();
     liveUnsub = fb.onSnapshot(fb.doc(db,'teamsportSessions',code),(snap)=>{
       if(!snap.exists()) { notify('Live-Session wurde gelöscht.', true); currentRoom=''; updateModePill(); return; }
-      const d=snap.data(); students=d.students||students; teams=d.teams||teams; fields=mergeIncomingFields(d.fields||fields); ruleCards=d.ruleCards||ruleCards; currentClassName=d.className||currentClassName; if(d.settings?.currentSport) currentSport=d.settings.currentSport; if(typeof d.settings?.creativeRulesAllowed==='boolean') creativeRulesAllowed=d.settings.creativeRulesAllowed; if(typeof d.settings?.adaptiveRulesEnabled==='boolean') adaptiveRulesEnabled=d.settings.adaptiveRulesEnabled; if(typeof d.settings?.adaptiveRulesEnabled==='boolean') adaptiveRulesEnabled=d.settings.adaptiveRulesEnabled; renderAll(); refreshJoinedField(); updateTimerDisplays(); updateModePill();
+      const d=snap.data(); students=d.students||students; teams=d.teams||teams; fields=mergeIncomingFields(d.fields||fields); ruleCards=d.ruleCards||ruleCards; currentClassName=d.className||currentClassName; if(Number.isInteger(d.settings?.pairingRound)) pairingRound=d.settings.pairingRound; if(d.settings?.currentSport) currentSport=d.settings.currentSport; if(typeof d.settings?.creativeRulesAllowed==='boolean') creativeRulesAllowed=d.settings.creativeRulesAllowed; if(typeof d.settings?.adaptiveRulesEnabled==='boolean') adaptiveRulesEnabled=d.settings.adaptiveRulesEnabled; if(typeof d.settings?.adaptiveRulesEnabled==='boolean') adaptiveRulesEnabled=d.settings.adaptiveRulesEnabled; renderAll(); refreshJoinedField(); updateTimerDisplays(); updateModePill();
     });
   }
   async function pushLiveField(f){
@@ -1225,7 +1286,7 @@
     if(!firebaseReady){ const ok=await initFirebaseFromConfig(getPreferredFirebaseConfigText(true)); if(!ok) return; }
     const code=$('joinRoomCode').value.trim().toUpperCase(); if(!code) return notify('Raumcode eingeben.', true);
     const snap=await fb.getDoc(fb.doc(db,'teamsportSessions',code)); if(!snap.exists()) return notify('Raum nicht gefunden.', true);
-    currentRoom=code; const d=snap.data(); students=d.students||[]; teams=d.teams||[]; fields=d.fields||[]; ruleCards=d.ruleCards||ruleCards; if(d.settings?.roundMinutes) $('roundMinutes').value=d.settings.roundMinutes; if(d.settings?.currentSport) currentSport=d.settings.currentSport; if(typeof d.settings?.creativeRulesAllowed==='boolean') creativeRulesAllowed=d.settings.creativeRulesAllowed; if(typeof d.settings?.adaptiveRulesEnabled==='boolean') adaptiveRulesEnabled=d.settings.adaptiveRulesEnabled;
+    currentRoom=code; const d=snap.data(); students=d.students||[]; teams=d.teams||[]; fields=d.fields||[]; ruleCards=d.ruleCards||ruleCards; if(d.settings?.roundMinutes) $('roundMinutes').value=d.settings.roundMinutes; if(Number.isInteger(d.settings?.pairingRound)) pairingRound=d.settings.pairingRound; if(d.settings?.currentSport) currentSport=d.settings.currentSport; if(typeof d.settings?.creativeRulesAllowed==='boolean') creativeRulesAllowed=d.settings.creativeRulesAllowed; if(typeof d.settings?.adaptiveRulesEnabled==='boolean') adaptiveRulesEnabled=d.settings.adaptiveRulesEnabled;
     renderAll();
     subscribeRoom(code);
     updateJoinFieldSelect();
