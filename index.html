@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Teamsport Pro- und Handicap Generator – Offline & Live v27</title>
+  <title>Teamsport Pro- und Handicap Generator – Offline & Live v29</title>
   <style>
     :root{
       --green:#16a34a; --green-dark:#15803d; --green-soft:#ecfdf5;
@@ -270,7 +270,9 @@
     {id:'h_dom_no_two_shots', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'leicht', title:'Abschluss wechseln', text:'{name}: Du darfst nicht zweimal hintereinander den Torabschluss übernehmen.', why:'Verteilt Abschlüsse im Team.'},
     {id:'h_dom_direct_play', active:true, type:'Handicap', target:'dominant', problem:'passes', strength:'stark', title:'Direktspiel-Auftrag', text:'{name}: Du darfst nur direkt oder nach einem Kontakt weiterspielen, nicht dribbeln.', why:'Erzwingt Orientierung vor der Ballannahme und stärkt das Passspiel.'},
     {id:'h_dom_after_goal_assist', active:true, type:'Handicap', target:'dominant', problem:'solo', strength:'mittel', title:'Nach Tor: Vorlage', text:'{name}: Wenn du ein Tor erzielt hast, musst du beim nächsten Angriff zuerst eine Vorlage geben.', why:'Erfolg wird an Teamdienlichkeit gekoppelt.'},
-    {id:'h_dom_third_person', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', title:'Dritte Person einbeziehen', text:'{name}: Vor einem Torabschluss muss über dich mindestens eine dritte Person eingebunden werden.', why:'Verhindert Zweier-Dominanz und öffnet das Spiel.'},
+    {id:'h_dom_third_person', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', title:'Zwei Mitspieler:innen einbeziehen', text:'{name}: Du darfst erst abschließen, wenn seit dem Ballgewinn zwei verschiedene Mitspieler:innen am Ball waren.', why:'Öffnet das Spiel und bindet mehrere Personen ein.'},
+    {id:'h_dom_double_pass_only', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', title:'Abschluss nur nach Doppelpass', text:'{name}: Du darfst nur nach einem erkennbaren Doppelpass selbst abschließen.', why:'Starkes Handicap bei deutlicher Führung; die Person bleibt torgefährlich, muss aber kooperieren.'},
+    {id:'h_dom_no_final_third', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', title:'Kein Abschluss im letzten Drittel', text:'{name}: Du darfst im letzten Drittel vor dem gegnerischen Tor nicht selbst abschließen, sondern nur vorbereiten.', why:'Starkes, leicht kontrollierbares Handicap bei deutlicher Führung.'},
 
     // Procaps für wenig beteiligte Einzelpersonen
     {id:'p_low_3_sec', active:true, type:'Procap', target:'low', problem:'any', strength:'mittel', title:'3-Sekunden-Schutz', text:'{name}: Nach deiner Ballannahme hast du 3 Sekunden Schutz vor direktem Angriff.', why:'Gibt Zeit für Ballkontrolle und Entscheidung.'},
@@ -330,7 +332,7 @@
     {id:'fu_team_no_direct_goal', active:true, type:'Teamregel', target:'team', problem:'any', strength:'mittel', sports:['football'], title:'Kein Direkt-Solo-Tor', text:'{team}: Ein Tor zählt nur, wenn vorher mindestens ein Pass gespielt wurde.', why:'Macht Fußball stärker zum Zusammenspiel.'},
 
     {id:'football_pair_handhold', active:true, type:'Handicap', target:'leading', problem:'uneven', strength:'mittel', sports:['football'], title:'Handfassung-Duo', text:'{team}: Zwei Personen spielen eine Runde als Handfassung-Duo. Kein Ziehen, kein Blocken.', why:'Geeignet für Fußball-Kleinfeld: Überlegenheit wird gebremst, Absprachen und gemeinsames Bewegen werden wichtiger.'},
-    {id:'football_pair_third_person', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['football'], title:'Dritte Person statt Zweier-Duo', text:'{name}: Wenn du mit deiner stärksten Anspielperson kombinierst, muss vor dem Torabschluss eine dritte Person eingebunden werden.', why:'Reduziert Zweier-Dominanz und fördert breitere Beteiligung.'},
+    {id:'football_pair_third_person', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['football'], title:'Zwei Mitspieler:innen einbeziehen', text:'{name}: Du darfst erst abschließen, wenn seit dem Ballgewinn zwei verschiedene Mitspieler:innen am Ball waren.', why:'Reduziert Zweier-Dominanz und fördert breitere Beteiligung.'},
 
     // Basketball-spezifisch
     {id:'bb_dom_weak_hand', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['basketball'], title:'Schwache Hand', text:'{name}: Du darfst in der nächsten Runde nur mit deiner schwächeren Hand dribbeln.', why:'Sportartspezifisches Handicap, das Dominanz reduziert und Technik variiert.'},
@@ -379,6 +381,7 @@
 
 
   const $ = (id) => document.getElementById(id);
+  let playerOnlyMode = false;
   const saveLocal = () => localStorage.setItem('fbph_state', JSON.stringify({students, teams, fields, ruleCards, currentClassName, currentSport, creativeRulesAllowed}));
   const loadLocal = () => {
     try { const s = JSON.parse(localStorage.getItem('fbph_state') || '{}'); students=s.students||[]; teams=s.teams||[]; fields=s.fields||[]; ruleCards=s.ruleCards||JSON.parse(localStorage.getItem('fbph_rule_cards')||'null')||cloneDefaultRules(); currentClassName=s.currentClassName||''; currentSport=s.currentSport||localStorage.getItem('fbph_current_sport')||'general'; creativeRulesAllowed = typeof s.creativeRulesAllowed==='boolean' ? s.creativeRulesAllowed : (localStorage.getItem('fbph_creative_rules_allowed')==='true'); sanitizeRuleCardsForNormalFields(); } catch(e){}
@@ -394,14 +397,22 @@
 
   // ---------------- VIEW ----------------
   window.switchView = function(view){
+    if(playerOnlyMode && view!=='player') view='player';
     ['teacher','player','game','display','rules'].forEach(v=>{
       $(v+'View').classList.toggle('hidden', v!==view);
-      $('tab'+v[0].toUpperCase()+v.slice(1)).classList.toggle('active', v===view);
+      const tab=$('tab'+v[0].toUpperCase()+v.slice(1));
+      if(tab) tab.classList.toggle('active', v===view);
     });
     if(view==='game') renderGameFields();
     if(view==='display') renderDisplayOverview();
     if(view==='rules') renderRuleEditor();
   };
+  function applyPlayerOnlyMode(){
+    playerOnlyMode=true;
+    ['Teacher','Game','Display','Rules'].forEach(name=>{ const el=$('tab'+name); if(el) el.classList.add('hidden'); });
+    const playerTab=$('tabPlayer'); if(playerTab) playerTab.classList.add('hidden');
+    switchView('player');
+  }
 
   function updateModePill(){
     $('modePill').textContent = currentRoom ? `Live: ${currentRoom}` : 'Offline';
@@ -689,8 +700,31 @@
   }
   function addRuleRecommendation(rec, rule, ctx){
     if(!rule) return false;
-    rec.push({type:`${rule.type} · ${rule.title || rule.strength}`, text:applyTemplate(rule.text, ctx), why:applyTemplate(rule.why, ctx), cardId:rule.id, strength:rule.strength});
+    rec.push({
+      type:`${rule.type} · ${rule.title || rule.strength}`,
+      text:applyTemplate(rule.text, ctx),
+      why:applyTemplate(rule.why, ctx),
+      cardId:rule.id,
+      strength:rule.strength,
+      subjectIds:Array.isArray(ctx?.ids)?ctx.ids:[],
+      template:rule.text||'',
+      whyTemplate:rule.why||'',
+      context:{team:ctx?.team||'', otherTeam:ctx?.otherTeam||''}
+    });
     return true;
+  }
+  function combineSamePersonRules(items){
+    const out=[];
+    for(const item of items||[]){
+      const canCombine=item.cardId && item.subjectIds?.length && !/[{}](team|otherTeam)[{}]/.test(item.template||'');
+      const match=canCombine ? out.find(x=>x.cardId===item.cardId && x.subjectIds?.length && x.template===item.template) : null;
+      if(!match){ out.push({...item, subjectIds:[...(item.subjectIds||[])]}); continue; }
+      match.subjectIds=[...new Set([...(match.subjectIds||[]),...(item.subjectIds||[])])];
+      const ctx=namesCtx(match.subjectIds, match.context||{});
+      match.text=applyTemplate(match.template,ctx);
+      match.why=applyTemplate(match.whyTemplate,ctx);
+    }
+    return out;
   }
   function compactNames(ids){
     const names=[...new Set((ids||[]).filter(Boolean))].map(studentName).filter(Boolean);
@@ -701,7 +735,7 @@
   }
   function namesCtx(ids, base={}){
     const unique=[...new Set((ids||[]).filter(Boolean))];
-    return {...base, name:compactNames(unique), plural:unique.length>1};
+    return {...base, ids:unique, name:compactNames(unique), plural:unique.length>1};
   }
   function makeRecommendations(f,obs){
     const rec=[]; const used=[]; const diff=(obs.scoreA||0)-(obs.scoreB||0);
@@ -759,7 +793,7 @@
       if(rec.length<3 && leadLow.length){
         addPick('low', namesCtx(leadLow, {team:leadTeam, otherTeam:trailTeam}), 'leicht', {maxStrength:'mittel'});
       }
-      return rec.slice(0,3);
+      return combineSamePersonRules(rec).slice(0,3);
     }
 
     // Knapper Spielstand: Beteiligung ausgleichen, aber nur 1–3 Karten.
@@ -772,7 +806,7 @@
     // Wenn keine auffälligen Personen eingetragen sind: leichte gemeinsame Challenge.
     if(rec.length===0){ addPick('all',{team:'Beide Teams'},'leicht') || addPick('team',{team:'Beide Teams'},'mittel'); }
     if(rec.length===0) rec.push({type:'Teamregel · Kurz', text:'Ein Tor zählt nur, wenn mindestens 3 verschiedene Teammitglieder beteiligt waren.', why:'Mehr Beteiligung im Team.', strength:'mittel'});
-    return rec.slice(0,3);
+    return combineSamePersonRules(rec).slice(0,3);
   }
   
   function recommendationsHtml(f){
@@ -1010,7 +1044,8 @@
     const hashParams = new URLSearchParams(hash);
     const code = searchParams.get('join') || searchParams.get('room') || hashParams.get('join') || hashParams.get('room');
     const view = searchParams.get('view') || hashParams.get('view');
-    if(view === 'display') { switchView('display'); } else if(view === 'player' || code) { switchView('player'); }
+    if(view === 'display') { switchView('display'); }
+    else if(view === 'player' || code) { applyPlayerOnlyMode(); }
     if(!code) return;
     $('joinRoomCode').value=code.toUpperCase();
     if($('joinInfo')) $('joinInfo').textContent='Raumcode erkannt. Verbinde...';
@@ -1099,7 +1134,7 @@
   function escapeAttr(s){ return escapeHtml(s).replace(/`/g,'&#96;'); }
 
   // Init
-  loadLocal(); if(localStorage.getItem('fbph_default_sport_v27')!=='1'){ currentSport='general'; localStorage.setItem('fbph_current_sport','general'); localStorage.setItem('fbph_default_sport_v27','1'); saveLocal(); } if(!ruleCards || !ruleCards.length) ruleCards=cloneDefaultRules(); mergeMissingDefaultRules(); refreshClassSelect(); $('firebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; $('joinFirebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; renderAll(); if($('sportProfile')) $('sportProfile').value=currentSport; if($('creativeRulesAllowed')) $('creativeRulesAllowed').checked=creativeRulesAllowed; updateModePill(); updateJoinFieldSelect(); handleDeepLinkJoin();
+  loadLocal(); if(localStorage.getItem('fbph_default_sport_v29')!=='1'){ currentSport='general'; localStorage.setItem('fbph_current_sport','general'); localStorage.setItem('fbph_default_sport_v29','1'); saveLocal(); } if(!ruleCards || !ruleCards.length) ruleCards=cloneDefaultRules(); mergeMissingDefaultRules(); refreshClassSelect(); $('firebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; $('joinFirebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; renderAll(); if($('sportProfile')) $('sportProfile').value=currentSport; if($('creativeRulesAllowed')) $('creativeRulesAllowed').checked=creativeRulesAllowed; updateModePill(); updateJoinFieldSelect(); handleDeepLinkJoin();
 
 </script>
 </body>
