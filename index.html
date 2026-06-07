@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Teamsport Assistent – Offline & Live v35</title>
+  <title>Teamsport Assistent – Offline & Live v37</title>
   <style>
     :root{
       --green:#16a34a; --green-dark:#15803d; --green-soft:#ecfdf5;
@@ -90,7 +90,21 @@
           <label>Gruppenlogik<br><select id="teamMode" style="width:100%"><option value="balanced">grob ausgleichen</option><option value="random">zufällig</option></select></label>
         </div>
         <button class="primary full" style="margin-top:12px" onclick="generateTeams()">Teams & Felder neu mischen</button>
-        <button class="ghost full" style="margin-top:8px" onclick="rotatePairings()">Paarungen rotieren</button>
+        <div class="two" style="margin-top:8px">
+          <label>Paarungen ändern<br>
+            <select id="pairingMode" style="width:100%" onchange="updatePairingModeUI()">
+              <option value="random" selected>zufällig neu paaren</option>
+              <option value="roundrobin">Rundensystem</option>
+              <option value="manual">schnell selbst einstellen</option>
+            </select>
+          </label>
+          <label>&nbsp;<br><button class="ghost full" onclick="rotatePairings()">Neue Paarungen</button></label>
+        </div>
+        <div id="manualPairingPanel" class="hidden" style="margin-top:10px;border:1px solid var(--border);border-radius:14px;padding:10px;background:#f8fafc">
+          <div class="muted" style="margin-bottom:8px">Pro Feld zwei Teams auswählen und anschließend übernehmen.</div>
+          <div id="manualPairingRows"></div>
+          <button class="blue full" style="margin-top:8px" onclick="applyManualPairings()">Paarungen übernehmen</button>
+        </div>
         <div class="notice" style="margin-top:10px">Tipp: Wenn die Gruppengröße nicht aufgeht, werden automatisch Wechselspieler:innen den Teams zugeordnet. Nach Toren erinnert die App diskret an Rotation.</div>
         <div class="notice" style="margin-top:8px">Datenschutz: Für Live-Sessions besser Kürzel/Nummern nutzen und nach der Stunde löschen.</div>
       </div>
@@ -583,17 +597,76 @@
     const pairs=roundRobinPairs(teams,pairingRound).slice(0,fc);
     fields=pairs.map((pair,i)=>newFieldState(i,pair[0],pair[1],onField,null));
   }
-  window.rotatePairings = function(){
-    if(teams.length<4) return notify('Erst Teams erstellen.', true);
-    const maxRounds=Math.max(1,teams.length-1);
-    pairingRound=(pairingRound+1)%maxRounds;
+  function currentPairKeys(){
+    return new Set(fields.map(f=>[f.teamA,f.teamB].sort().join('|')));
+  }
+  function randomPairs(teamList, fieldCount){
+    const old=currentPairKeys();
+    let best=[];
+    for(let attempt=0;attempt<80;attempt++){
+      const ids=shuffleArray(teamList.map(t=>t.id));
+      const pairs=[];
+      for(let i=0;i+1<ids.length && pairs.length<fieldCount;i+=2) pairs.push([ids[i],ids[i+1]]);
+      best=pairs;
+      if(pairs.every(p=>!old.has([...p].sort().join('|')))) break;
+    }
+    return best;
+  }
+  function applyPairingSet(pairs,message){
     const onField=Math.max(2, parseInt($('teamSize')?.value)||3);
-    const fc=Math.max(1,Math.min(parseInt($('fieldCount')?.value)||3,Math.floor(teams.length/2)));
-    const pairs=roundRobinPairs(teams,pairingRound).slice(0,fc);
     fields=pairs.map((pair,i)=>newFieldState(i,pair[0],pair[1],onField,fields[i]));
     selectedJoinedFieldId='';
     renderAll(); updateJoinFieldSelect(); pushLiveTeamsAndFields();
-    notify(`Neue Paarungen erstellt (Runde ${pairingRound+1} von ${maxRounds}).`);
+    notify(message);
+  }
+  window.updatePairingModeUI = function(){
+    const manual=$('pairingMode')?.value==='manual';
+    $('manualPairingPanel')?.classList.toggle('hidden',!manual);
+    if(manual) renderManualPairingRows();
+  };
+  function renderManualPairingRows(){
+    const box=$('manualPairingRows'); if(!box) return;
+    if(!teams.length){ box.innerHTML='<div class="muted">Erst Teams erstellen.</div>'; return; }
+    const fc=Math.max(1,Math.min(parseInt($('fieldCount')?.value)||3,Math.floor(teams.length/2)));
+    const opts=(selected='')=>teams.map(t=>`<option value="${t.id}" ${t.id===selected?'selected':''}>${escapeHtml(t.name)}</option>`).join('');
+    box.innerHTML=Array.from({length:fc},(_,i)=>{
+      const f=fields[i];
+      const a=f?.teamA||teams[(i*2)%teams.length]?.id||'';
+      const b=f?.teamB||teams[(i*2+1)%teams.length]?.id||'';
+      return `<div class="two" style="margin-bottom:8px"><label>Kleinfeld ${i+1} – Team A<br><select id="manualPairA${i}" style="width:100%">${opts(a)}</select></label><label>Kleinfeld ${i+1} – Team B<br><select id="manualPairB${i}" style="width:100%">${opts(b)}</select></label></div>`;
+    }).join('');
+  }
+  window.applyManualPairings = function(){
+    if(teams.length<2) return notify('Erst Teams erstellen.', true);
+    const fc=Math.max(1,Math.min(parseInt($('fieldCount')?.value)||3,Math.floor(teams.length/2)));
+    const pairs=[]; const used=new Set();
+    for(let i=0;i<fc;i++){
+      const a=$(`manualPairA${i}`)?.value, b=$(`manualPairB${i}`)?.value;
+      if(!a||!b) return notify(`Bitte für Kleinfeld ${i+1} beide Teams auswählen.`,true);
+      if(a===b) return notify(`Auf Kleinfeld ${i+1} kann ein Team nicht gegen sich selbst spielen.`,true);
+      if(used.has(a)||used.has(b)) return notify('Jedes Team darf in einer Runde nur einem Feld zugeordnet sein.',true);
+      used.add(a); used.add(b); pairs.push([a,b]);
+    }
+    applyPairingSet(pairs,'Manuelle Paarungen übernommen.');
+  };
+  window.rotatePairings = function(){
+    if(teams.length<4) return notify('Erst Teams erstellen.', true);
+    const mode=$('pairingMode')?.value||'random';
+    const fc=Math.max(1,Math.min(parseInt($('fieldCount')?.value)||3,Math.floor(teams.length/2)));
+    if(mode==='manual'){
+      $('manualPairingPanel')?.classList.remove('hidden');
+      renderManualPairingRows();
+      return;
+    }
+    if(mode==='random'){
+      const pairs=randomPairs(teams,fc);
+      applyPairingSet(pairs,'Teams wurden zufällig neu gepaart.');
+      return;
+    }
+    const maxRounds=Math.max(1,teams.length-1);
+    pairingRound=(pairingRound+1)%maxRounds;
+    const pairs=roundRobinPairs(teams,pairingRound).slice(0,fc);
+    applyPairingSet(pairs,`Neue Paarungen im Rundensystem (Runde ${pairingRound+1} von ${maxRounds}).`);
   };
   async function pushLiveTeamsAndFields(){
     saveLocal();
