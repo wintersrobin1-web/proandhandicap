@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Teamsport Pro- und Handicap Generator – Offline & Live v34</title>
+  <title>Teamsport Assistent – Offline & Live v35</title>
   <style>
     :root{
       --green:#16a34a; --green-dark:#15803d; --green-soft:#ecfdf5;
@@ -44,7 +44,7 @@
 <div class="app">
   <header>
     <div>
-      <h1>🏑 Teamsport Pro- und Handicap Generator</h1>
+      <h1>⚽ Teamsport Assistent</h1>
       <div class="muted">Offline nutzbar · optional Live-Session mit Raumcode · keine Rundendaten dauerhaft im Offline-Modus</div>
     </div>
     <div class="row">
@@ -53,7 +53,7 @@
       <button class="tab" id="tabPlayer" onclick="switchView('player')">iPad beitreten</button>
       <button class="tab" id="tabGame" onclick="switchView('game')">Spielmodus</button>
       <button class="tab" id="tabDisplay" onclick="switchView('display')">Regelübersicht</button>
-      <button class="tab" id="tabRules" onclick="switchView('rules')">Pro-/Handicaps</button>
+      <button class="tab" id="tabRules" onclick="switchView('rules')">Spielanpassungen</button>
     </div>
   </header>
 
@@ -200,8 +200,9 @@
   <section id="rulesView" class="hidden grid main">
     <aside class="grid">
       <div class="card">
-        <h2>Pro-/Handicap bearbeiten</h2>
+        <h2>Spielanpassungen bearbeiten</h2>
         <label>Sportart-Profil<br><select id="sportProfile" style="width:100%" onchange="setSportProfile(this.value)"><option value="general">Allgemein / Teamsport</option><option value="floorball">Floorball / Unihockey</option><option value="football">Fußball</option><option value="basketball">Basketball</option><option value="handball">Handball</option><option value="ultimate">Ultimate / Frisbee</option></select></label>
+        <label class="row" style="margin-top:12px;gap:9px;align-items:flex-start"><input type="checkbox" id="adaptiveRulesEnabled" onchange="setAdaptiveRulesEnabled(this.checked)"><span><strong>Auswertung mit Pro-/Handicaps aktivieren</strong><br><span class="muted">Aus: Die App dient nur für Teameinteilung, Uhr und Punktetafel. Beteiligungsauswahl und Regelvorschläge werden ausgeblendet.</span></span></label>
         <div class="row" style="margin-top:8px"><button class="blue" onclick="applySportPreset()">Geeignete Karten für Sportart aktivieren</button><button class="ghost" onclick="activateAllRules()">Alle Karten aktivieren</button></div>
         <label class="row" style="margin-top:12px;gap:9px;align-items:flex-start"><input type="checkbox" id="creativeRulesAllowed" onchange="setCreativeRulesAllowed(this.checked)"><span><strong>Spielerische/kreative Handicaps erlauben</strong><br><span class="muted">Dann werden bei passenden Situationen mit erhöhter Wahrscheinlichkeit sichere, spielerische Challenges der gewählten Sportart ausgewählt.</span></span></label>
         <div class="notice" style="margin-top:10px">Regelkarten anpassen, neu erstellen oder deaktivieren. Die App wählt anschließend anhand von Spielstand, Beteiligung und aktiviertem Kartenpool passende Karten aus. In Regeltexten kannst du die Platzhalter {name}, {team} und {otherTeam} verwenden.</div>
@@ -254,6 +255,7 @@
   let currentClassName = '';
   let currentSport = localStorage.getItem('fbph_current_sport') || 'general';
   let creativeRulesAllowed = localStorage.getItem('fbph_creative_rules_allowed') === 'true';
+  let adaptiveRulesEnabled = localStorage.getItem('fbph_adaptive_rules_enabled') !== 'false';
   let timers = {};
   const localPendingFields = {}; // verhindert, dass ein alter Live-Snapshot einen gerade gedrückten Timer-Button überschreibt
   let firebaseReady = false;
@@ -421,9 +423,9 @@
 
   const $ = (id) => document.getElementById(id);
   let playerOnlyMode = false;
-  const saveLocal = () => localStorage.setItem('fbph_state', JSON.stringify({students, teams, fields, ruleCards, currentClassName, currentSport, creativeRulesAllowed}));
+  const saveLocal = () => localStorage.setItem('fbph_state', JSON.stringify({students, teams, fields, ruleCards, currentClassName, currentSport, creativeRulesAllowed, adaptiveRulesEnabled}));
   const loadLocal = () => {
-    try { const s = JSON.parse(localStorage.getItem('fbph_state') || '{}'); students=s.students||[]; teams=s.teams||[]; fields=s.fields||[]; ruleCards=s.ruleCards||JSON.parse(localStorage.getItem('fbph_rule_cards')||'null')||cloneDefaultRules(); currentClassName=s.currentClassName||''; currentSport=s.currentSport||localStorage.getItem('fbph_current_sport')||'general'; creativeRulesAllowed = typeof s.creativeRulesAllowed==='boolean' ? s.creativeRulesAllowed : (localStorage.getItem('fbph_creative_rules_allowed')==='true'); sanitizeRuleCardsForNormalFields(); } catch(e){}
+    try { const s = JSON.parse(localStorage.getItem('fbph_state') || '{}'); students=s.students||[]; teams=s.teams||[]; fields=s.fields||[]; ruleCards=s.ruleCards||JSON.parse(localStorage.getItem('fbph_rule_cards')||'null')||cloneDefaultRules(); currentClassName=s.currentClassName||''; currentSport=s.currentSport||localStorage.getItem('fbph_current_sport')||'general'; creativeRulesAllowed = typeof s.creativeRulesAllowed==='boolean' ? s.creativeRulesAllowed : (localStorage.getItem('fbph_creative_rules_allowed')==='true'); adaptiveRulesEnabled = typeof s.adaptiveRulesEnabled==='boolean' ? s.adaptiveRulesEnabled : (localStorage.getItem('fbph_adaptive_rules_enabled')!=='false'); sanitizeRuleCardsForNormalFields(); } catch(e){}
   };
 
   function makeId(){ return Math.random().toString(36).slice(2,10); }
@@ -581,22 +583,22 @@
         <div class="row" style="justify-content:center">
           <button class="primary" ${interactive?'':'disabled'} onclick="startTimer('${f.id}')">Start</button>
           <button class="ghost" ${interactive?'':'disabled'} onclick="pauseTimer('${f.id}')">Pause</button>
-          <button class="orange" ${interactive?'':'disabled'} onclick="finishRound('${f.id}')">Runde auswerten</button>
+          <button class="orange" ${interactive?'':'disabled'} onclick="finishRound('${f.id}')">${adaptiveRulesEnabled?'Runde auswerten':'Runde abschließen'}</button>
           <button class="ghost" ${interactive?'':'disabled'} onclick="resetFieldRound('${f.id}')">Reset</button>
         </div>
         <div class="two">
           <div class="side"><h4>${escapeHtml(a?.name||'Team A')}</h4>${teamRoleHint(a, f.onFieldSize || parseInt($('teamSize')?.value)||3)}
-            ${obsSelects(f.id,f.teamA,'domA','War oft beteiligt','War auch oft beteiligt')}
-            ${obsSelects(f.id,f.teamA,'lowA','Kam wenig ins Spiel','Kam auch wenig ins Spiel')}
+            ${adaptiveRulesEnabled ? obsSelects(f.id,f.teamA,'domA','War oft beteiligt','War auch oft beteiligt') : ''}
+            ${adaptiveRulesEnabled ? obsSelects(f.id,f.teamA,'lowA','Kam wenig ins Spiel','Kam auch wenig ins Spiel') : ''}
             <div class="row" style="margin-top:8px"><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','A',1)">Tor +</button><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','A',-1)">Tor −</button></div>
           </div>
           <div class="side"><h4>${escapeHtml(b?.name||'Team B')}</h4>${teamRoleHint(b, f.onFieldSize || parseInt($('teamSize')?.value)||3)}
-            ${obsSelects(f.id,f.teamB,'domB','War oft beteiligt','War auch oft beteiligt')}
-            ${obsSelects(f.id,f.teamB,'lowB','Kam wenig ins Spiel','Kam auch wenig ins Spiel')}
+            ${adaptiveRulesEnabled ? obsSelects(f.id,f.teamB,'domB','War oft beteiligt','War auch oft beteiligt') : ''}
+            ${adaptiveRulesEnabled ? obsSelects(f.id,f.teamB,'lowB','Kam wenig ins Spiel','Kam auch wenig ins Spiel') : ''}
             <div class="row" style="margin-top:8px"><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','B',1)">Tor +</button><button class="small" ${interactive?'':'disabled'} onclick="changeScore('${f.id}','B',-1)">Tor −</button></div>
           </div>
         </div>
-        <div id="rec-${f.id}">${recommendationsHtml(f)}</div>
+        ${adaptiveRulesEnabled ? `<div id="rec-${f.id}">${recommendationsHtml(f)}</div>` : ''}
       </div>
     </div>`;
   }
@@ -695,6 +697,11 @@
 
   window.finishRound=function(fid){
     const f=fields.find(x=>x.id===fid); if(!f) return; f.timer={remaining:calcRemaining(f), running:false, startedAt:null, startedAtMs:null, endsAtMs:null}; markFieldChanged(f);
+    if(!adaptiveRulesEnabled){
+      f.recommendations=[]; f.lastObservation=null; f.observationDraft={domA:['',''],lowA:['',''],domB:['',''],lowB:['','']}; f.round=(f.round||1)+1;
+      f.timer={remaining:getDefaultTimerSeconds(), running:false, startedAt:null, startedAtMs:null, endsAtMs:null}; f.rotationHint=''; f.rotationHintAtMs=null;
+      markFieldChanged(f); renderGameFields(); renderFieldsSummary(); renderDisplayOverview(); refreshJoinedField(); updateTimerDisplays(); pushLiveField(f); notify('Runde abgeschlossen. Spielstand bleibt bis Reset sichtbar.'); return;
+    }
     const draft=f.observationDraft||{};
     const obs={
       domA:[$('domA0-'+fid)?.value||obsArray(draft,'domA')[0]||'', $('domA1-'+fid)?.value||obsArray(draft,'domA')[1]||''], lowA:[$('lowA0-'+fid)?.value||obsArray(draft,'lowA')[0]||'', $('lowA1-'+fid)?.value||obsArray(draft,'lowA')[1]||''], domB:[$('domB0-'+fid)?.value||obsArray(draft,'domB')[0]||'', $('domB1-'+fid)?.value||obsArray(draft,'domB')[1]||''], lowB:[$('lowB0-'+fid)?.value||obsArray(draft,'lowB')[0]||'', $('lowB1-'+fid)?.value||obsArray(draft,'lowB')[1]||''],
@@ -862,6 +869,7 @@
   }
   
   function recommendationsHtml(f){
+    if(!adaptiveRulesEnabled) return '';
     if(!f.recommendations?.length) return '<div class="recommend"><strong>Noch keine Regelkarte</strong><span class="muted">Nach der Runde auswerten.</span></div>';
     return f.recommendations.map(r=>`<div class="recommend ${r.type.includes('Procap')?'good':(r.type.includes('Handicap')||r.type.includes('Ausgleich'))?'warn':r.type.includes('Fairness')?'danger':''}"><strong>${escapeHtml(r.type)}</strong><div>${escapeHtml(r.text)}</div></div>`).join('');
   }
@@ -872,7 +880,7 @@
     if(!fields.length){ c.innerHTML='<div class="muted">Noch keine Felder vorhanden.</div>'; return; }
     c.innerHTML = fields.map(f=>{
       const a=getTeam(f.teamA), b=getTeam(f.teamB);
-      const rec=(f.recommendations||[]).length ? recommendationsHtml(f) : '<div class="overview-rec"><strong>Noch keine Auswertung</strong><div class="muted">Nach der Runde auswerten.</div></div>';
+      const rec=!adaptiveRulesEnabled ? '' : ((f.recommendations||[]).length ? recommendationsHtml(f) : '<div class="overview-rec"><strong>Noch keine Auswertung</strong><div class="muted">Nach der Runde auswerten.</div></div>');
       return `<div class="overview-field"><h3>${escapeHtml(f.name)}</h3><div class="overview-score">${escapeHtml(a?.name||'Team A')} ${f.scoreA||0} : ${f.scoreB||0} ${escapeHtml(b?.name||'Team B')}</div><div class="muted">Runde ${f.round||1} · Uhr: <span data-timer-id="${f.id}">${formatTime(calcRemaining(f))}</span></div>${rec}</div>`;
     }).join('');
   }
@@ -926,6 +934,7 @@
     if(!ruleCards?.length) ruleCards=cloneDefaultRules();
     if($('sportProfile')) $('sportProfile').value=currentSport;
     if($('creativeRulesAllowed')) $('creativeRulesAllowed').checked=creativeRulesAllowed;
+    if($('adaptiveRulesEnabled')) $('adaptiveRulesEnabled').checked=adaptiveRulesEnabled;
 
     const sportOrder=['general','football','handball','basketball','floorball','ultimate','multi'];
     const strengthOrder=['stark','mittel','leicht'];
@@ -977,6 +986,11 @@
   function sportLabel(v){ return ({general:'allgemein',floorball:'Floorball',football:'Fußball',basketball:'Basketball',handball:'Handball',ultimate:'Ultimate',all:'alle'}[v]||v); }
   window.setSportProfile=function(v){ currentSport=v||'general'; localStorage.setItem('fbph_current_sport', currentSport); saveLocal(); renderRuleEditor(); notify('Sportart-Profil gesetzt. Aktive Karten bleiben unverändert.'); };
   window.setCreativeRulesAllowed=function(v){ creativeRulesAllowed=!!v; localStorage.setItem('fbph_creative_rules_allowed', String(creativeRulesAllowed)); saveLocal(); renderRuleEditor(); pushLiveRules(); notify(creativeRulesAllowed?'Spielerische Handicaps sind erlaubt.':'Spielerische Handicaps sind ausgeschaltet.'); };
+  window.setAdaptiveRulesEnabled=function(v){
+    adaptiveRulesEnabled=!!v; localStorage.setItem('fbph_adaptive_rules_enabled', String(adaptiveRulesEnabled));
+    if(!adaptiveRulesEnabled){ fields.forEach(f=>{ f.recommendations=[]; f.lastObservation=null; f.observationDraft={domA:['',''],lowA:['',''],domB:['',''],lowB:['','']}; markFieldChanged(f); }); }
+    saveLocal(); renderAll(); pushLiveRules(); pushLiveFields(); notify(adaptiveRulesEnabled?'Auswertung mit Pro-/Handicaps ist aktiviert.':'Nur Teameinteilung, Uhr und Punktetafel sind aktiv.');
+  };
   window.applySportPreset=function(){
     const sport=$('sportProfile')?.value || currentSport || 'general'; currentSport=sport; localStorage.setItem('fbph_current_sport', currentSport);
     ruleCards.forEach(r=>{ const sp=ruleSports(r); r.active = sp.includes('general') || sp.includes(sport) || !defaultRuleByBase(r.id); });
@@ -1158,7 +1172,7 @@
     if(!teams.length || !fields.length) return notify('Erst Teams/Felder erstellen.', true);
     currentRoom = ($('roomCode').value.trim().toUpperCase() || `TEAM-${makeCode(3)}`).replace(/\s+/g,'-'); $('roomCode').value=currentRoom;
     fields = fields.map(f => ({...f, timer: ensureFieldTimer(f), updatedAtMs: f.updatedAtMs || nowMs(), updatedAt: f.updatedAt || nowIso()}));
-    const session={roomCode:currentRoom, className:currentClassName||$('className').value||'Klasse', teacherPin, createdAt:nowIso(), updatedAt:nowIso(), expiresAt:new Date(Date.now()+4*60*60*1000).toISOString(), students, teams, fields, ruleCards, settings:{roundMinutes:parseInt($('roundMinutes').value)||4, fieldCount:parseInt($('fieldCount').value)||3, currentSport, creativeRulesAllowed}};
+    const session={roomCode:currentRoom, className:currentClassName||$('className').value||'Klasse', teacherPin, createdAt:nowIso(), updatedAt:nowIso(), expiresAt:new Date(Date.now()+4*60*60*1000).toISOString(), students, teams, fields, ruleCards, settings:{roundMinutes:parseInt($('roundMinutes').value)||4, fieldCount:parseInt($('fieldCount').value)||3, currentSport, creativeRulesAllowed, adaptiveRulesEnabled}};
     await fb.setDoc(fb.doc(db,'teamsportSessions',currentRoom), session);
     subscribeRoom(currentRoom); updateModePill(); $('roomInfo').innerHTML=`Raumcode: <span class="copy">${currentRoom}</span> · PIN lokal: <span class="copy">${teacherPin}</span> · Ablauf: ${new Date(session.expiresAt).toLocaleTimeString('de-DE')}`; notify('Live-Session erstellt.'); showIpadJoinAccess();
   };
@@ -1180,7 +1194,7 @@
     if(liveUnsub) liveUnsub();
     liveUnsub = fb.onSnapshot(fb.doc(db,'teamsportSessions',code),(snap)=>{
       if(!snap.exists()) { notify('Live-Session wurde gelöscht.', true); currentRoom=''; updateModePill(); return; }
-      const d=snap.data(); students=d.students||students; teams=d.teams||teams; fields=mergeIncomingFields(d.fields||fields); ruleCards=d.ruleCards||ruleCards; currentClassName=d.className||currentClassName; if(d.settings?.currentSport) currentSport=d.settings.currentSport; if(typeof d.settings?.creativeRulesAllowed==='boolean') creativeRulesAllowed=d.settings.creativeRulesAllowed; renderAll(); refreshJoinedField(); updateTimerDisplays(); updateModePill();
+      const d=snap.data(); students=d.students||students; teams=d.teams||teams; fields=mergeIncomingFields(d.fields||fields); ruleCards=d.ruleCards||ruleCards; currentClassName=d.className||currentClassName; if(d.settings?.currentSport) currentSport=d.settings.currentSport; if(typeof d.settings?.creativeRulesAllowed==='boolean') creativeRulesAllowed=d.settings.creativeRulesAllowed; if(typeof d.settings?.adaptiveRulesEnabled==='boolean') adaptiveRulesEnabled=d.settings.adaptiveRulesEnabled; if(typeof d.settings?.adaptiveRulesEnabled==='boolean') adaptiveRulesEnabled=d.settings.adaptiveRulesEnabled; renderAll(); refreshJoinedField(); updateTimerDisplays(); updateModePill();
     });
   }
   async function pushLiveField(f){
@@ -1195,7 +1209,7 @@
   async function pushLiveRules(){
     saveLocal();
     if(!currentRoom || !firebaseReady) return;
-    try{ await fb.updateDoc(fb.doc(db,'teamsportSessions',currentRoom), {ruleCards, 'settings.currentSport':currentSport, 'settings.creativeRulesAllowed':creativeRulesAllowed, updatedAt:nowIso()}); }catch(e){ console.warn(e); }
+    try{ await fb.updateDoc(fb.doc(db,'teamsportSessions',currentRoom), {ruleCards, 'settings.currentSport':currentSport, 'settings.creativeRulesAllowed':creativeRulesAllowed, 'settings.adaptiveRulesEnabled':adaptiveRulesEnabled, updatedAt:nowIso()}); }catch(e){ console.warn(e); }
   }
   window.deleteLiveSession=async function(){
     if(!currentRoom || !firebaseReady) return notify('Keine Live-Session aktiv.', true);
@@ -1211,7 +1225,7 @@
     if(!firebaseReady){ const ok=await initFirebaseFromConfig(getPreferredFirebaseConfigText(true)); if(!ok) return; }
     const code=$('joinRoomCode').value.trim().toUpperCase(); if(!code) return notify('Raumcode eingeben.', true);
     const snap=await fb.getDoc(fb.doc(db,'teamsportSessions',code)); if(!snap.exists()) return notify('Raum nicht gefunden.', true);
-    currentRoom=code; const d=snap.data(); students=d.students||[]; teams=d.teams||[]; fields=d.fields||[]; ruleCards=d.ruleCards||ruleCards; if(d.settings?.roundMinutes) $('roundMinutes').value=d.settings.roundMinutes; if(d.settings?.currentSport) currentSport=d.settings.currentSport; if(typeof d.settings?.creativeRulesAllowed==='boolean') creativeRulesAllowed=d.settings.creativeRulesAllowed;
+    currentRoom=code; const d=snap.data(); students=d.students||[]; teams=d.teams||[]; fields=d.fields||[]; ruleCards=d.ruleCards||ruleCards; if(d.settings?.roundMinutes) $('roundMinutes').value=d.settings.roundMinutes; if(d.settings?.currentSport) currentSport=d.settings.currentSport; if(typeof d.settings?.creativeRulesAllowed==='boolean') creativeRulesAllowed=d.settings.creativeRulesAllowed; if(typeof d.settings?.adaptiveRulesEnabled==='boolean') adaptiveRulesEnabled=d.settings.adaptiveRulesEnabled;
     renderAll();
     subscribeRoom(code);
     updateJoinFieldSelect();
@@ -1235,7 +1249,8 @@
   function escapeAttr(s){ return escapeHtml(s).replace(/`/g,'&#96;'); }
 
   // Init
-  loadLocal(); if(localStorage.getItem('fbph_default_sport_v33')!=='1'){ currentSport='general'; localStorage.setItem('fbph_current_sport','general'); localStorage.setItem('fbph_default_sport_v33','1'); saveLocal(); } if(!ruleCards || !ruleCards.length) ruleCards=cloneDefaultRules(); mergeMissingDefaultRules(); sanitizeRuleCardsForNormalFields(); refreshClassSelect(); $('firebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; $('joinFirebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; renderAll(); if($('sportProfile')) $('sportProfile').value=currentSport; if($('creativeRulesAllowed')) $('creativeRulesAllowed').checked=creativeRulesAllowed; updateModePill(); updateJoinFieldSelect(); handleDeepLinkJoin();
+  loadLocal(); if(localStorage.getItem('fbph_default_sport_v33')!=='1'){ currentSport='general'; localStorage.setItem('fbph_current_sport','general'); localStorage.setItem('fbph_default_sport_v33','1'); saveLocal(); } if(!ruleCards || !ruleCards.length) ruleCards=cloneDefaultRules(); mergeMissingDefaultRules(); sanitizeRuleCardsForNormalFields(); refreshClassSelect(); $('firebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; $('joinFirebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; renderAll(); if($('sportProfile')) $('sportProfile').value=currentSport; if($('creativeRulesAllowed')) $('creativeRulesAllowed').checked=creativeRulesAllowed;
+    if($('adaptiveRulesEnabled')) $('adaptiveRulesEnabled').checked=adaptiveRulesEnabled; updateModePill(); updateJoinFieldSelect(); handleDeepLinkJoin();
 
 </script>
 </body>
