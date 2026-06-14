@@ -39,6 +39,7 @@
     .obs-block select { margin-top: 4px; }
     .student-toggle{margin-top:10px;border:1px solid var(--border);border-radius:14px;background:#f8fafc;overflow:hidden}
     .student-toggle summary{cursor:pointer;list-style:none;padding:10px 12px;font-weight:900;color:#334155;display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .student-summary-title{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
     .student-toggle summary::-webkit-details-marker{display:none}
     .student-toggle summary:after{content:'aufklappen';font-size:11px;font-weight:800;color:#64748b;background:#e2e8f0;border-radius:999px;padding:3px 8px}
     .student-toggle[open] summary:after{content:'zuklappen'}
@@ -56,7 +57,7 @@
     <div class="row">
       <span id="modePill" class="pill offline">Offline</span>
       <button class="tab active" id="tabTeacher" onclick="switchView('teacher')">Lehrkraft</button>
-      <button class="tab" id="tabPlayer" onclick="switchView('player')">iPad beitreten</button>
+      <button class="tab" id="tabPlayer" onclick="switchView('player')">Gerät beitreten</button>
       <button class="tab" id="tabGame" onclick="switchView('game')">Spielmodus</button>
       <button class="tab" id="tabDisplay" onclick="switchView('display')">Regelübersicht</button>
       <button class="tab" id="tabRules" onclick="switchView('rules')">Spielanpassungen</button>
@@ -82,7 +83,7 @@
           <button class="primary full" onclick="addNames()">Hinzufügen</button>
         </div>
         <details id="studentListDetails" class="student-toggle">
-          <summary>SuS-Liste (<span id="studentCount">0</span>)</summary>
+          <summary><span class="student-summary-title">SuS-Liste (<span id="studentCount">0</span>)</span></summary>
           <div class="muted" style="padding:0 10px 8px 10px">Nur bei Bedarf öffnen – so sind die Stärke-Werte beim Zeigen der Lehrkraftseite nicht sichtbar.</div>
           <div id="studentList" class="students"><div class="muted">Keine Namen</div></div>
         </details>
@@ -120,7 +121,7 @@
 
       <div class="card">
         <h2>3. Live-Session optional</h2>
-        <div class="notice">Offline funktioniert ohne Internet. Live nutzt dein fest eingebautes Firebase-Projekt. Andere iPads können per Raumcode beitreten.</div>
+        <div class="notice">Offline funktioniert ohne Internet. Live nutzt dein fest eingebautes Firebase-Projekt. Andere Geräte können per Raumcode beitreten.</div>
         <details style="margin-top:8px">
           <summary class="muted" style="cursor:pointer;font-weight:700">Erweiterte Firebase-Config anzeigen/ändern</summary>
           <h3>Firebase Config</h3>
@@ -138,18 +139,18 @@
         </div>
         <div id="roomInfo" class="muted" style="margin-top:8px"></div>
         <div class="row" style="margin-top:8px">
-          <button class="ghost" onclick="showIpadJoinAccess()">iPad-Link & QR anzeigen</button>
-          <button class="ghost" onclick="copyIpadJoinLink()">iPad-Link kopieren</button>
+          <button class="ghost" onclick="showIpadJoinAccess()">Geräte-Link & QR anzeigen</button>
+          <button class="ghost" onclick="copyIpadJoinLink()">Geräte-Link kopieren</button>
           <button class="ghost" onclick="copyDisplayLink()">Regelübersicht-Link kopieren</button>
         </div>
         <div id="ipadJoinAccess" class="qr-panel hidden">
           <div class="qr-grid">
             <div id="ipadQrCode" class="qr-code"><span class="muted">QR</span></div>
             <div>
-              <strong>Direktlink für iPads</strong>
-              <div class="muted" style="margin:4px 0 8px 0">Öffnet die iPad-Beitrittsseite und trägt den Raumcode automatisch ein.</div>
+              <strong>Direktlink für Geräte</strong>
+              <div class="muted" style="margin:4px 0 8px 0">Öffnet die Geräte-Beitrittsseite und trägt den Raumcode automatisch ein.</div>
               <div id="ipadJoinLink" class="qr-link"></div>
-              <div id="ipadJoinWarning" class="notice hidden" style="margin-top:8px;border-left-color:#ea580c">Hinweis: Dieser Direktlink funktioniert auf anderen iPads nur, wenn diese HTML-Datei online erreichbar ist, z. B. über GitHub Pages. Bei einer lokalen file://-Datei bitte die App auf den iPads öffnen und den Raumcode manuell eingeben.</div>
+              <div id="ipadJoinWarning" class="notice hidden" style="margin-top:8px;border-left-color:#ea580c">Hinweis: Dieser Direktlink funktioniert auf anderen Geräten nur, wenn diese HTML-Datei online erreichbar ist, z. B. über GitHub Pages. Bei einer lokalen file://-Datei bitte die App auf den Geräten öffnen und den Raumcode manuell eingeben.</div>
             </div>
           </div>
         </div>
@@ -176,7 +177,7 @@
   <section id="playerView" class="hidden grid main">
     <aside class="grid">
       <div class="card">
-        <h2>iPad einer Live-Session beitreten</h2>
+        <h2>Gerät einer Live-Session beitreten</h2>
         <div class="notice">Die Firebase-Verbindung ist voreingestellt. Normalerweise reicht: Raumcode eingeben → Beitreten → Kleinfeld wählen.</div>
         <details style="margin-top:8px">
           <summary class="muted" style="cursor:pointer;font-weight:700">Erweiterte Firebase-Config anzeigen/ändern</summary>
@@ -216,7 +217,7 @@
 
   <section id="displayView" class="hidden card">
     <h2>Regelübersicht für die nächste Runde</h2>
-    <div class="notice">Diese Ansicht ist für ein iPad/Beamer gedacht: Die SuS sehen nach der Auswertung schnell, welche Pro-/Handicaps auf ihrem Feld gelten. Die Lehrkraft kann dann zügig durchgehen.</div>
+    <div class="notice">Diese Ansicht ist für ein Gerät/Beamer gedacht: Die SuS sehen nach der Auswertung schnell, welche Pro-/Handicaps auf ihrem Feld gelten. Die Lehrkraft kann dann zügig durchgehen.</div>
     <div class="global-clock"><strong>Globale Uhr</strong><div class="row" style="margin-top:8px"><button class="primary" onclick="globalStartTimers()">Alle starten</button><button class="ghost" onclick="globalPauseTimers()">Alle pausieren</button><button class="orange" onclick="globalResetTimers()">Alle resetten</button></div></div>
     <div id="displayOverviewContainer" class="overview-grid" style="margin-top:12px"></div>
   </section>
@@ -1262,7 +1263,7 @@
   };
 
   function makeIpadJoinLink(code){
-    // Direktlink in die iPad-/Beitrittsansicht. Query-Parameter sind stabiler als nur Hash,
+    // Direktlink in die Geräte-/Beitrittsansicht. Query-Parameter sind stabiler als nur Hash,
     // besonders bei GitHub Pages und wenn vorher schon ein Hash gesetzt war.
     const url = new URL(window.location.href);
     url.searchParams.set('view','player');
@@ -1302,7 +1303,7 @@
     const code=(currentRoom || $('roomCode').value || '').trim().toUpperCase();
     if(!code) return notify('Erst Raum erstellen oder Raumcode eintragen.', true);
     const link=makeIpadJoinLink(code);
-    try{ await navigator.clipboard.writeText(link); notify('iPad-Link kopiert.'); }
+    try{ await navigator.clipboard.writeText(link); notify('Geräte-Link kopiert.'); }
     catch(e){ $('ipadJoinAccess').classList.remove('hidden'); $('ipadJoinLink').textContent=link; notify('Kopieren nicht möglich – Link wird angezeigt.', true); }
   };
 
@@ -1336,7 +1337,7 @@
     return incomingList.map(nf => {
       const lf = currentById[nf.id];
       // Nur eine gerade lokal gedrückte Eingabe kurz schützen. Danach ist immer der Live-Stand maßgeblich.
-      // Wichtig: Nicht nach Geräte-Uhrzeit vergleichen, weil iPad und Lehrkraftgerät abweichende Date.now()-Werte haben können.
+      // Wichtig: Nicht nach Geräte-Uhrzeit vergleichen, weil Gerät und Lehrkraftgerät abweichende Date.now()-Werte haben können.
       const pending = localPendingFields[nf.id] && localPendingFields[nf.id] > now;
       if(pending && lf) return lf;
       delete localPendingFields[nf.id];
