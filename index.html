@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Teamsport Assistent – Offline & Live v42</title>
+  <title>Teamsport Assistent – Offline & Live v43</title>
   <style>
     :root{
       --green:#16a34a; --green-dark:#15803d; --green-soft:#ecfdf5;
@@ -51,7 +51,6 @@
   <header>
     <div>
       <h1>⚽ Teamsport Assistent</h1>
-      <div class="muted">Offline nutzbar · optional Live-Session mit Raumcode · keine Rundendaten dauerhaft im Offline-Modus</div>
     </div>
     <div class="row">
       <span id="modePill" class="pill offline">Offline</span>
@@ -228,7 +227,6 @@
         <label>Sportart-Profil<br><select id="sportProfile" style="width:100%" onchange="setSportProfile(this.value)"><option value="general">Teamsport (allgemein)</option><option value="floorball">Floorball / Unihockey / Hockey</option><option value="football">Fußball</option><option value="basketball">Basketball</option><option value="handball">Handball</option><option value="ultimate">Ultimate / Frisbee</option></select></label>
         <label class="row" style="margin-top:12px;gap:9px;align-items:flex-start"><input type="checkbox" id="adaptiveRulesEnabled" onchange="setAdaptiveRulesEnabled(this.checked)"><span><strong>Auswertung mit Pro-/Handicaps aktivieren</strong><br><span class="muted">Aus: Die App dient nur für Teameinteilung, Uhr und Punktetafel. Beteiligungsauswahl und Regelvorschläge werden ausgeblendet.</span></span></label>
         <label class="row" style="margin-top:12px;gap:9px;align-items:flex-start"><input type="checkbox" id="generalRuleCardsEnabled" onchange="setGeneralRuleCardsEnabled(this.checked)"><span><strong>Allgemeine Team-/Ausgleichsregeln erlauben</strong><br><span class="muted">Aus: Die App nutzt nur personenbezogene Pro-/Handicaps aus „War oft beteiligt“ und „Kam wenig ins Spiel“.</span></span></label>
-        <div class="notice" style="margin-top:8px">Beim Wechsel der Sportart werden passende Karten automatisch aktiviert und weniger passende deaktiviert.</div>
         <div class="row" style="margin-top:8px"><button class="ghost" onclick="activateAllRules()">Alle Karten aktivieren</button></div>
         <label class="row" style="margin-top:12px;gap:9px;align-items:flex-start"><input type="checkbox" id="creativeRulesAllowed" onchange="setCreativeRulesAllowed(this.checked)"><span><strong>Spielerische/kreative Handicaps erlauben</strong><br><span class="muted">Dann werden bei passenden Situationen mit erhöhter Wahrscheinlichkeit sichere, spielerische Challenges der gewählten Sportart ausgewählt.</span></span></label>
         <div class="notice" style="margin-top:10px">Regelkarten anpassen, neu erstellen oder deaktivieren. Die App wählt anschließend anhand von Spielstand, Beteiligung und aktiviertem Kartenpool passende Karten aus. In Regeltexten kannst du die Platzhalter {name}, {team} und {otherTeam} verwenden.</div>
