@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Teamsport Assistent – Offline & Live v40</title>
+  <title>Teamsport Assistent – Offline & Live v42</title>
   <style>
     :root{
       --green:#16a34a; --green-dark:#15803d; --green-soft:#ecfdf5;
@@ -39,7 +39,6 @@
     .obs-block select { margin-top: 4px; }
     .student-toggle{margin-top:10px;border:1px solid var(--border);border-radius:14px;background:#f8fafc;overflow:hidden}
     .student-toggle summary{cursor:pointer;list-style:none;padding:10px 12px;font-weight:900;color:#334155;display:flex;align-items:center;justify-content:space-between;gap:8px}
-    .student-summary-title{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
     .student-toggle summary::-webkit-details-marker{display:none}
     .student-toggle summary:after{content:'aufklappen';font-size:11px;font-weight:800;color:#64748b;background:#e2e8f0;border-radius:999px;padding:3px 8px}
     .student-toggle[open] summary:after{content:'zuklappen'}
@@ -57,7 +56,7 @@
     <div class="row">
       <span id="modePill" class="pill offline">Offline</span>
       <button class="tab active" id="tabTeacher" onclick="switchView('teacher')">Lehrkraft</button>
-      <button class="tab" id="tabPlayer" onclick="switchView('player')">Gerät beitreten</button>
+      <button class="tab" id="tabPlayer" onclick="switchView('player')">iPad beitreten</button>
       <button class="tab" id="tabGame" onclick="switchView('game')">Spielmodus</button>
       <button class="tab" id="tabDisplay" onclick="switchView('display')">Regelübersicht</button>
       <button class="tab" id="tabRules" onclick="switchView('rules')">Spielanpassungen</button>
@@ -83,7 +82,7 @@
           <button class="primary full" onclick="addNames()">Hinzufügen</button>
         </div>
         <details id="studentListDetails" class="student-toggle">
-          <summary><span class="student-summary-title">SuS-Liste (<span id="studentCount">0</span>)</span></summary>
+          <summary>SuS-Liste (<span id="studentCount">0</span>)</summary>
           <div class="muted" style="padding:0 10px 8px 10px">Nur bei Bedarf öffnen – so sind die Stärke-Werte beim Zeigen der Lehrkraftseite nicht sichtbar.</div>
           <div id="studentList" class="students"><div class="muted">Keine Namen</div></div>
         </details>
@@ -121,7 +120,7 @@
 
       <div class="card">
         <h2>3. Live-Session optional</h2>
-        <div class="notice">Offline funktioniert ohne Internet. Live nutzt dein fest eingebautes Firebase-Projekt. Andere Geräte können per Raumcode beitreten.</div>
+        <div class="notice">Offline funktioniert ohne Internet. Live nutzt dein fest eingebautes Firebase-Projekt. Andere iPads können per Raumcode beitreten.</div>
         <details style="margin-top:8px">
           <summary class="muted" style="cursor:pointer;font-weight:700">Erweiterte Firebase-Config anzeigen/ändern</summary>
           <h3>Firebase Config</h3>
@@ -139,18 +138,18 @@
         </div>
         <div id="roomInfo" class="muted" style="margin-top:8px"></div>
         <div class="row" style="margin-top:8px">
-          <button class="ghost" onclick="showIpadJoinAccess()">Geräte-Link & QR anzeigen</button>
-          <button class="ghost" onclick="copyIpadJoinLink()">Geräte-Link kopieren</button>
+          <button class="ghost" onclick="showIpadJoinAccess()">iPad-Link & QR anzeigen</button>
+          <button class="ghost" onclick="copyIpadJoinLink()">iPad-Link kopieren</button>
           <button class="ghost" onclick="copyDisplayLink()">Regelübersicht-Link kopieren</button>
         </div>
         <div id="ipadJoinAccess" class="qr-panel hidden">
           <div class="qr-grid">
             <div id="ipadQrCode" class="qr-code"><span class="muted">QR</span></div>
             <div>
-              <strong>Direktlink für Geräte</strong>
-              <div class="muted" style="margin:4px 0 8px 0">Öffnet die Geräte-Beitrittsseite und trägt den Raumcode automatisch ein.</div>
+              <strong>Direktlink für iPads</strong>
+              <div class="muted" style="margin:4px 0 8px 0">Öffnet die iPad-Beitrittsseite und trägt den Raumcode automatisch ein.</div>
               <div id="ipadJoinLink" class="qr-link"></div>
-              <div id="ipadJoinWarning" class="notice hidden" style="margin-top:8px;border-left-color:#ea580c">Hinweis: Dieser Direktlink funktioniert auf anderen Geräten nur, wenn diese HTML-Datei online erreichbar ist, z. B. über GitHub Pages. Bei einer lokalen file://-Datei bitte die App auf den Geräten öffnen und den Raumcode manuell eingeben.</div>
+              <div id="ipadJoinWarning" class="notice hidden" style="margin-top:8px;border-left-color:#ea580c">Hinweis: Dieser Direktlink funktioniert auf anderen iPads nur, wenn diese HTML-Datei online erreichbar ist, z. B. über GitHub Pages. Bei einer lokalen file://-Datei bitte die App auf den iPads öffnen und den Raumcode manuell eingeben.</div>
             </div>
           </div>
         </div>
@@ -177,7 +176,7 @@
   <section id="playerView" class="hidden grid main">
     <aside class="grid">
       <div class="card">
-        <h2>Gerät einer Live-Session beitreten</h2>
+        <h2>iPad einer Live-Session beitreten</h2>
         <div class="notice">Die Firebase-Verbindung ist voreingestellt. Normalerweise reicht: Raumcode eingeben → Beitreten → Kleinfeld wählen.</div>
         <details style="margin-top:8px">
           <summary class="muted" style="cursor:pointer;font-weight:700">Erweiterte Firebase-Config anzeigen/ändern</summary>
@@ -217,7 +216,7 @@
 
   <section id="displayView" class="hidden card">
     <h2>Regelübersicht für die nächste Runde</h2>
-    <div class="notice">Diese Ansicht ist für ein Gerät/Beamer gedacht: Die SuS sehen nach der Auswertung schnell, welche Pro-/Handicaps auf ihrem Feld gelten. Die Lehrkraft kann dann zügig durchgehen.</div>
+    <div class="notice">Diese Ansicht ist für ein iPad/Beamer gedacht: Die SuS sehen nach der Auswertung schnell, welche Pro-/Handicaps auf ihrem Feld gelten. Die Lehrkraft kann dann zügig durchgehen.</div>
     <div class="global-clock"><strong>Globale Uhr</strong><div class="row" style="margin-top:8px"><button class="primary" onclick="globalStartTimers()">Alle starten</button><button class="ghost" onclick="globalPauseTimers()">Alle pausieren</button><button class="orange" onclick="globalResetTimers()">Alle resetten</button></div></div>
     <div id="displayOverviewContainer" class="overview-grid" style="margin-top:12px"></div>
   </section>
@@ -405,6 +404,16 @@
   function baseRuleId(id){ return String(id||'').replace(/_[a-z0-9]{4}$/,''); }
   function defaultRuleByBase(id){ const base=baseRuleId(id); return DEFAULT_RULE_CARDS.find(r=>r.id===base); }
   function ruleSports(rule){ return rule.sports || defaultRuleByBase(rule.id)?.sports || ['general']; }
+  function isIndividualRuleCard(rule){ return rule?.target==='dominant' || rule?.target==='low'; }
+  function ruleAllowedByGeneralToggle(rule){ return generalRuleCardsEnabled || isIndividualRuleCard(rule); }
+  function ruleMatchesCurrentSport(rule){
+    const sp=ruleSports(rule);
+    return sp.includes('general') || sp.includes(currentSport) || currentSport==='all' || !defaultRuleByBase(rule.id);
+  }
+  function ruleShouldBeActiveByPreset(rule){ return ruleMatchesCurrentSport(rule) && ruleAllowedByGeneralToggle(rule); }
+  function enforceRuleActivationForSettings(){
+    (ruleCards||[]).forEach(r=>{ if(!ruleAllowedByGeneralToggle(r)) r.active=false; });
+  }
   function sanitizeRuleCardsForNormalFields(){
     const obsoleteBases=new Set(['h_dom_double_pass_goal','p_low_pass_bonus','p_low_joker','t_all_before_next_goal','fb_dom_schiebepass','football_pair_third_person','hb_team_wing_involve','fu_team_no_direct_goal']);
     const patches={
@@ -455,7 +464,7 @@
   let playerOnlyMode = false;
   const saveLocal = () => localStorage.setItem('fbph_state', JSON.stringify({students, teams, fields, pairingRound, ruleCards, currentClassName, currentSport, creativeRulesAllowed, adaptiveRulesEnabled, generalRuleCardsEnabled}));
   const loadLocal = () => {
-    try { const s = JSON.parse(localStorage.getItem('fbph_state') || '{}'); students=s.students||[]; teams=s.teams||[]; fields=s.fields||[]; pairingRound=Number.isInteger(s.pairingRound)?s.pairingRound:0; ruleCards=s.ruleCards||JSON.parse(localStorage.getItem('fbph_rule_cards')||'null')||cloneDefaultRules(); currentClassName=s.currentClassName||''; currentSport=s.currentSport||localStorage.getItem('fbph_current_sport')||'general'; creativeRulesAllowed = typeof s.creativeRulesAllowed==='boolean' ? s.creativeRulesAllowed : (localStorage.getItem('fbph_creative_rules_allowed')==='true'); adaptiveRulesEnabled = typeof s.adaptiveRulesEnabled==='boolean' ? s.adaptiveRulesEnabled : (localStorage.getItem('fbph_adaptive_rules_enabled')!=='false'); generalRuleCardsEnabled = typeof s.generalRuleCardsEnabled==='boolean' ? s.generalRuleCardsEnabled : (localStorage.getItem('fbph_general_rule_cards_enabled')!=='false'); sanitizeRuleCardsForNormalFields(); } catch(e){}
+    try { const s = JSON.parse(localStorage.getItem('fbph_state') || '{}'); students=s.students||[]; teams=s.teams||[]; fields=s.fields||[]; pairingRound=Number.isInteger(s.pairingRound)?s.pairingRound:0; ruleCards=s.ruleCards||JSON.parse(localStorage.getItem('fbph_rule_cards')||'null')||cloneDefaultRules(); currentClassName=s.currentClassName||''; currentSport=s.currentSport||localStorage.getItem('fbph_current_sport')||'general'; creativeRulesAllowed = typeof s.creativeRulesAllowed==='boolean' ? s.creativeRulesAllowed : (localStorage.getItem('fbph_creative_rules_allowed')==='true'); adaptiveRulesEnabled = typeof s.adaptiveRulesEnabled==='boolean' ? s.adaptiveRulesEnabled : (localStorage.getItem('fbph_adaptive_rules_enabled')!=='false'); generalRuleCardsEnabled = typeof s.generalRuleCardsEnabled==='boolean' ? s.generalRuleCardsEnabled : (localStorage.getItem('fbph_general_rule_cards_enabled')!=='false'); sanitizeRuleCardsForNormalFields(); enforceRuleActivationForSettings(); } catch(e){}
   };
 
   function makeId(){ return Math.random().toString(36).slice(2,10); }
@@ -1143,16 +1152,24 @@
   window.setGeneralRuleCardsEnabled=function(v){
     generalRuleCardsEnabled=!!v; localStorage.setItem('fbph_general_rule_cards_enabled', String(generalRuleCardsEnabled));
     if(!generalRuleCardsEnabled){ fields.forEach(f=>{ f.recommendations=[]; f.lastObservation=null; markFieldChanged(f); }); }
+    applySportPreset(true);
     saveLocal(); renderAll(); pushLiveRules(); pushLiveFields(); notify(generalRuleCardsEnabled?'Allgemeine Team-/Ausgleichsregeln sind aktiv.':'Nur individuelle Pro-/Handicaps sind aktiv.');
   };
   window.applySportPreset=function(silent=false){
     const sport=$('sportProfile')?.value || currentSport || 'general'; currentSport=sport; localStorage.setItem('fbph_current_sport', currentSport);
-    ruleCards.forEach(r=>{ const sp=ruleSports(r); r.active = sp.includes('general') || sp.includes(sport) || !defaultRuleByBase(r.id); });
+    ruleCards.forEach(r=>{ r.active = ruleShouldBeActiveByPreset(r); });
     localStorage.setItem('fbph_rule_cards', JSON.stringify(ruleCards)); saveLocal(); renderRuleEditor(); pushLiveRules(); if(!silent) notify('Karten für '+sportLabel(currentSport)+' automatisch umgestellt.');
   };
-  window.activateAllRules=function(){ ruleCards.forEach(r=>r.active=true); localStorage.setItem('fbph_rule_cards', JSON.stringify(ruleCards)); saveLocal(); renderRuleEditor(); pushLiveRules(); notify('Alle Karten aktiviert.'); };
+  window.activateAllRules=function(){
+    ruleCards.forEach(r=>{ r.active = ruleAllowedByGeneralToggle(r); });
+    localStorage.setItem('fbph_rule_cards', JSON.stringify(ruleCards)); saveLocal(); renderRuleEditor(); pushLiveRules();
+    notify(generalRuleCardsEnabled?'Alle Karten aktiviert.':'Nur individuelle Pro-/Handicaps aktiviert; allgemeine Team-/Ausgleichsregeln bleiben aus.');
+  };
   window.toggleRuleActive=function(id, checked){
     const r=ruleCards.find(x=>x.id===id); if(!r) return;
+    if(checked && !ruleAllowedByGeneralToggle(r)){
+      r.active=false; renderRuleEditor(); notify('Diese Karte bleibt aus, weil allgemeine Team-/Ausgleichsregeln deaktiviert sind.', true); return;
+    }
     r.active=checked; localStorage.setItem('fbph_rule_cards', JSON.stringify(ruleCards)); saveLocal(); renderRuleEditor(); pushLiveRules();
   };
   function setRuleSportChecks(sports){
@@ -1176,6 +1193,7 @@
     const selectedSports=getRuleSportChecks();
     if(!selectedSports.length) return notify('Bitte mindestens eine Sportart auswählen.', true);
     const r={id:$('ruleId').value||makeId(), active:$('ruleActive').checked, creative:$('ruleCreative')?.checked||false, type:$('ruleType').value, strength:$('ruleStrength').value, target:$('ruleTarget').value, problem:'any', sports:selectedSports, title:$('ruleTitle').value.trim()||'Regelkarte', text:$('ruleText').value.trim(), why:$('ruleWhy').value.trim()};
+    if(r.active && !ruleAllowedByGeneralToggle(r)) r.active=false;
     if(!r.text) return notify('Bitte Regeltext eintragen.', true);
     const idx=ruleCards.findIndex(x=>x.id===r.id); if(idx>=0) ruleCards[idx]=r; else ruleCards.push(r);
     localStorage.setItem('fbph_rule_cards', JSON.stringify(ruleCards)); saveLocal(); renderRuleEditor(); newRuleCard(); notify('Regelkarte gespeichert.');
@@ -1186,7 +1204,7 @@
   };
   window.resetRuleCards=function(){
     if(!confirm('Standardkarten wiederherstellen? Eigene Regelkarten werden ersetzt.')) return;
-    ruleCards=cloneDefaultRules(); localStorage.setItem('fbph_rule_cards', JSON.stringify(ruleCards)); saveLocal(); renderRuleEditor(); newRuleCard(); notify('Standardkarten wiederhergestellt.'); pushLiveRules();
+    ruleCards=cloneDefaultRules(); applySportPreset(true); localStorage.setItem('fbph_rule_cards', JSON.stringify(ruleCards)); saveLocal(); renderRuleEditor(); newRuleCard(); notify('Standardkarten wiederhergestellt.'); pushLiveRules();
   };
 
   // ---------------- FIREBASE LIVE ----------------
@@ -1263,7 +1281,7 @@
   };
 
   function makeIpadJoinLink(code){
-    // Direktlink in die Geräte-/Beitrittsansicht. Query-Parameter sind stabiler als nur Hash,
+    // Direktlink in die iPad-/Beitrittsansicht. Query-Parameter sind stabiler als nur Hash,
     // besonders bei GitHub Pages und wenn vorher schon ein Hash gesetzt war.
     const url = new URL(window.location.href);
     url.searchParams.set('view','player');
@@ -1303,7 +1321,7 @@
     const code=(currentRoom || $('roomCode').value || '').trim().toUpperCase();
     if(!code) return notify('Erst Raum erstellen oder Raumcode eintragen.', true);
     const link=makeIpadJoinLink(code);
-    try{ await navigator.clipboard.writeText(link); notify('Geräte-Link kopiert.'); }
+    try{ await navigator.clipboard.writeText(link); notify('iPad-Link kopiert.'); }
     catch(e){ $('ipadJoinAccess').classList.remove('hidden'); $('ipadJoinLink').textContent=link; notify('Kopieren nicht möglich – Link wird angezeigt.', true); }
   };
 
@@ -1337,7 +1355,7 @@
     return incomingList.map(nf => {
       const lf = currentById[nf.id];
       // Nur eine gerade lokal gedrückte Eingabe kurz schützen. Danach ist immer der Live-Stand maßgeblich.
-      // Wichtig: Nicht nach Geräte-Uhrzeit vergleichen, weil Gerät und Lehrkraftgerät abweichende Date.now()-Werte haben können.
+      // Wichtig: Nicht nach Geräte-Uhrzeit vergleichen, weil iPad und Lehrkraftgerät abweichende Date.now()-Werte haben können.
       const pending = localPendingFields[nf.id] && localPendingFields[nf.id] > now;
       if(pending && lf) return lf;
       delete localPendingFields[nf.id];
@@ -1403,7 +1421,7 @@
   function escapeAttr(s){ return escapeHtml(s).replace(/`/g,'&#96;'); }
 
   // Init
-  loadLocal(); if(localStorage.getItem('fbph_default_sport_v33')!=='1'){ currentSport='general'; localStorage.setItem('fbph_current_sport','general'); localStorage.setItem('fbph_default_sport_v33','1'); saveLocal(); } if(!ruleCards || !ruleCards.length) ruleCards=cloneDefaultRules(); mergeMissingDefaultRules(); sanitizeRuleCardsForNormalFields(); refreshClassSelect(); $('firebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; $('joinFirebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; renderAll(); if($('sportProfile')) $('sportProfile').value=currentSport; if($('creativeRulesAllowed')) $('creativeRulesAllowed').checked=creativeRulesAllowed;
+  loadLocal(); if(localStorage.getItem('fbph_default_sport_v33')!=='1'){ currentSport='general'; localStorage.setItem('fbph_current_sport','general'); localStorage.setItem('fbph_default_sport_v33','1'); saveLocal(); } if(!ruleCards || !ruleCards.length) ruleCards=cloneDefaultRules(); mergeMissingDefaultRules(); sanitizeRuleCardsForNormalFields(); enforceRuleActivationForSettings(); refreshClassSelect(); $('firebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; $('joinFirebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; renderAll(); if($('sportProfile')) $('sportProfile').value=currentSport; if($('creativeRulesAllowed')) $('creativeRulesAllowed').checked=creativeRulesAllowed;
     if($('adaptiveRulesEnabled')) $('adaptiveRulesEnabled').checked=adaptiveRulesEnabled; if($('generalRuleCardsEnabled')) $('generalRuleCardsEnabled').checked=generalRuleCardsEnabled; updateModePill(); updateJoinFieldSelect(); handleDeepLinkJoin();
 
 </script>
