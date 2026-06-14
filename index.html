@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Teamsport Assistent – Offline & Live v43</title>
+  <title>Teamsport Assistent – Offline & Live v45</title>
   <style>
     :root{
       --green:#16a34a; --green-dark:#15803d; --green-soft:#ecfdf5;
@@ -227,7 +227,6 @@
         <label>Sportart-Profil<br><select id="sportProfile" style="width:100%" onchange="setSportProfile(this.value)"><option value="general">Teamsport (allgemein)</option><option value="floorball">Floorball / Unihockey / Hockey</option><option value="football">Fußball</option><option value="basketball">Basketball</option><option value="handball">Handball</option><option value="ultimate">Ultimate / Frisbee</option></select></label>
         <label class="row" style="margin-top:12px;gap:9px;align-items:flex-start"><input type="checkbox" id="adaptiveRulesEnabled" onchange="setAdaptiveRulesEnabled(this.checked)"><span><strong>Auswertung mit Pro-/Handicaps aktivieren</strong><br><span class="muted">Aus: Die App dient nur für Teameinteilung, Uhr und Punktetafel. Beteiligungsauswahl und Regelvorschläge werden ausgeblendet.</span></span></label>
         <label class="row" style="margin-top:12px;gap:9px;align-items:flex-start"><input type="checkbox" id="generalRuleCardsEnabled" onchange="setGeneralRuleCardsEnabled(this.checked)"><span><strong>Allgemeine Team-/Ausgleichsregeln erlauben</strong><br><span class="muted">Aus: Die App nutzt nur personenbezogene Pro-/Handicaps aus „War oft beteiligt“ und „Kam wenig ins Spiel“.</span></span></label>
-        <div class="row" style="margin-top:8px"><button class="ghost" onclick="activateAllRules()">Alle Karten aktivieren</button></div>
         <label class="row" style="margin-top:12px;gap:9px;align-items:flex-start"><input type="checkbox" id="creativeRulesAllowed" onchange="setCreativeRulesAllowed(this.checked)"><span><strong>Spielerische/kreative Handicaps erlauben</strong><br><span class="muted">Dann werden bei passenden Situationen mit erhöhter Wahrscheinlichkeit sichere, spielerische Challenges der gewählten Sportart ausgewählt.</span></span></label>
         <div class="notice" style="margin-top:10px">Regelkarten anpassen, neu erstellen oder deaktivieren. Die App wählt anschließend anhand von Spielstand, Beteiligung und aktiviertem Kartenpool passende Karten aus. In Regeltexten kannst du die Platzhalter {name}, {team} und {otherTeam} verwenden.</div>
         <h3>Karte bearbeiten / hinzufügen</h3>
@@ -312,9 +311,11 @@
     {id:'h_dom_third_person', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', title:'Zwei Mitspieler:innen einbeziehen', text:'{name}: Du darfst erst abschließen, wenn seit dem Ballgewinn zwei verschiedene Mitspieler:innen am Ball waren.', why:'Öffnet das Spiel und bindet mehrere Personen ein.'},
     {id:'h_dom_double_pass_only', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', title:'Abschluss nur nach Doppelpass', text:'{name}: Du darfst nur nach einem erkennbaren Doppelpass selbst abschließen.', why:'Starkes Handicap bei deutlicher Führung; die Person bleibt torgefährlich, muss aber kooperieren.'},
     {id:'h_dom_no_final_third', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', title:'Kein Abschluss im letzten Drittel', text:'{name}: Du darfst im letzten Drittel vor dem gegnerischen Tor nicht selbst abschließen, sondern nur vorbereiten.', why:'Starkes, leicht kontrollierbares Handicap bei deutlicher Führung.'},
+    {id:'h_dom_2_sec_pass', active:true, type:'Handicap', target:'dominant', problem:'solo', strength:'mittel', sports:['general','football','basketball','handball','floorball'], title:'2-Sekunden-Regel', text:'{name}: Nach deiner Ballannahme musst du innerhalb von 2 Sekunden abspielen oder abschließen.', why:'Begrenzt Ballhalten und dominante Einzelaktionen, bleibt aber schnell und leicht kontrollierbar.'},
 
     // Procaps für wenig beteiligte Einzelpersonen
     {id:'p_low_3_sec', active:true, type:'Procap', target:'low', problem:'any', strength:'mittel', title:'3-Sekunden-Schutz', text:'{name}: Nach deiner Ballannahme hast du 3 Sekunden Schutz vor direktem Angriff.', why:'Gibt Zeit für Ballkontrolle und Entscheidung.'},
+    {id:'p_low_1m_space', active:true, type:'Procap', target:'low', problem:'pressure', strength:'mittel', sports:['general','football','basketball','handball','floorball','ultimate'], title:'1-Meter-Schutzraum', text:'{name}: Nach deiner Ballannahme gilt um dich ein Schutzraum von ca. 1 Meter. Direkter Angriff ist erst nach deinem ersten Pass oder nach 3 Sekunden erlaubt.', why:'Schafft sichtbar Abstand und gibt wenig eingebundenen SuS Zeit für eine kontrollierte Entscheidung.'},
     {id:'p_low_goal_if_involved', active:true, type:'Procap', target:'low', problem:'solo', strength:'mittel', title:'Einbindungsbonus', text:'{team}: Das nächste Tor zählt doppelt, wenn {name} vorher am Angriff beteiligt war.', why:'Fördert Einbindung, bleibt aber an ein echtes Tor gekoppelt.'},
     {id:'p_low_goal_if_involved_once', active:true, type:'Procap', target:'low', problem:'any', strength:'leicht', title:'Einmaliger Einbindungsbonus', text:'{team}: Maximal einmal in dieser Runde zählt ein Tor doppelt, wenn {name} vorher am Angriff beteiligt war.', why:'Milder Bonus für mehr Beteiligung ohne Punkte-Farming.'},
     {id:'p_low_goal_if_involved_all', active:true, type:'Procap', target:'low', problem:'uneven', strength:'stark', title:'Starker Einbindungsbonus', text:'{team}: Jedes Tor zählt doppelt, wenn {name} vorher am Angriff beteiligt war.', why:'Starker Ausgleich bei deutlichem Rückstand und geringer Beteiligung.'},
@@ -351,7 +352,6 @@
     {id:'fun_general_one_eye', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['general','football','basketball','handball','ultimate'], title:'Ein-Auge-Challenge', text:'{name}: Du spielst die nächste Runde mit einem geschlossenen Auge.', why:'Verändert Wahrnehmung und Orientierung deutlich.'},
     {id:'fun_general_own_half', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['general','football','basketball','handball','floorball','ultimate'], title:'Rückraum-Challenge', text:'{name}: Du darfst die eigene Spielfeldhälfte nicht verlassen und musst von dort aus vorbereiten.', why:'Spielerische Raumrolle, die auf jedem normalen Spielfeld funktioniert.'},
     {id:'fun_general_no_goal_area', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', sports:['general','football','basketball','handball','floorball'], title:'Abschluss-Sperre vor dem Tor', text:'{name}: Im letzten Drittel vor dem gegnerischen Tor darfst du nicht selbst abschließen.', why:'Klare starke Challenge ohne zusätzliche Markierungen.'},
-    {id:'fun_general_assist_after_touch', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['general','football','basketball','handball','floorball','ultimate'], title:'Erst passen, dann wieder angreifen', text:'{name}: Nach jedem eigenen Ballkontakt musst du zunächst abspielen, bevor du den Ball wieder bekommen darfst.', why:'Unterbricht dominante Ballfolgen und fördert Einbindung.'},
     {id:'fun_football_handhold', active:true, creative:true, type:'Handicap', target:'leading', problem:'uneven', strength:'mittel', sports:['football','handball'], title:'Hand-in-Hand-Duo', text:'{team}: Zwei Personen spielen bis zum nächsten Tor Hand in Hand. Nicht ziehen und andere nicht blockieren.', why:'Bremst ein führendes Team spielerisch und verlangt Abstimmung.'},
     {id:'fun_football_weak_foot_only', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['football'], title:'Nur schwächerer Fuß', text:'{name}: Du darfst den Ball nur mit deinem schwächeren Fuß spielen.', why:'Spielerische technische Herausforderung für häufig beteiligte Personen.'},
     {id:'fun_football_walk_only', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', sports:['football'], title:'Nur gehen', text:'{name}: Mit Ball am Fuß darfst du nur gehen, nicht laufen.', why:'Bremst starke Dribblings deutlich und fördert frühzeitiges Abspielen.'},
@@ -370,7 +370,6 @@
 
     {id:'fb_dom_no_dribble_lane', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', sports:['floorball'], title:'Kein Laufweg-Solo', text:'{name}: Du darfst den Ball nicht durch das ganze Feld führen – nach spätestens 3 Kontakten muss ein Pass kommen.', why:'Begrenzt dominante Dribblings mit Schläger und fördert frühes Abspiel.'},
     {id:'fb_low_stick_ready', active:true, type:'Procap', target:'low', problem:'any', strength:'mittel', sports:['floorball'], title:'Sichere Annahme', text:'{name}: Nach deiner Ballannahme hast du 3 Sekunden Schutz vor direktem Angriff.', why:'Gibt Zeit für Ballannahme und Entscheidung.'},
-    {id:'fb_team_banktor_pass', active:true, type:'Teamregel', target:'team', problem:'any', strength:'mittel', sports:['floorball'], title:'Banktor nur nach Pass', text:'{team}: Ein Tor zählt nur, wenn der letzte Ball vor dem Abschluss ein Pass war.', why:'Verhindert reine Einzelaktionen auf kleine Tore.'},
 
     // Fußball-spezifisch
     {id:'fu_dom_weak_foot', active:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['football'], title:'Schwacher Fuß', text:'{name}: Tore zählen für dich nur mit deinem schwächeren Fuß.', why:'Bremst dominante Spieler:innen, ohne sie aus dem Spiel zu nehmen.'},
@@ -413,7 +412,7 @@
     (ruleCards||[]).forEach(r=>{ if(!ruleAllowedByGeneralToggle(r)) r.active=false; });
   }
   function sanitizeRuleCardsForNormalFields(){
-    const obsoleteBases=new Set(['h_dom_double_pass_goal','p_low_pass_bonus','p_low_joker','t_all_before_next_goal','fb_dom_schiebepass','football_pair_third_person','hb_team_wing_involve','fu_team_no_direct_goal']);
+    const obsoleteBases=new Set(['h_dom_double_pass_goal','p_low_pass_bonus','p_low_joker','t_all_before_next_goal','fb_dom_schiebepass','football_pair_third_person','hb_team_wing_involve','fu_team_no_direct_goal','fun_general_assist_after_touch','fb_team_banktor_pass']);
     const patches={
       p_low_safe_zone:{title:'Sicherer Aufbau', text:'{name}: Wenn du in der eigenen Hälfte angespielt wirst, hast du 3 Sekunden Schutz.', why:'Gibt Sicherheit ohne zusätzliche Markierungen.'},
       a_trailing_joker_wall:{title:'Sicherer Neustart', text:'{team}: Nach Ballgewinn darf der erste Pass in die eigene Hälfte nicht direkt attackiert werden.', why:'Schafft eine sichere erste Anschlussaktion ohne Zusatzmaterial.'},
@@ -446,7 +445,11 @@
         text.includes('nach jedem gegentor startet ihr mit ballbesitz') ||
         text.includes('außenposition oder breite zone') ||
         text.includes('alle im team einmal am ball') ||
-        title.includes('joker-anspielstation')
+        title.includes('joker-anspielstation') ||
+        title.includes('erst passen, dann wieder angreifen') ||
+        text.includes('nach jedem eigenen ballkontakt musst du zunächst abspielen') ||
+        title.includes('banktor nur nach pass') ||
+        text.includes('ein tor zählt nur, wenn der letzte ball vor dem abschluss ein pass war')
       ) return {...card, active:false};
       return card;
     });
