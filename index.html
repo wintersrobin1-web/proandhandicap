@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Teamsport Assistent – Offline & Live v37</title>
+  <title>Teamsport Assistent – Offline & Live v39</title>
   <style>
     :root{
       --green:#16a34a; --green-dark:#15803d; --green-soft:#ecfdf5;
@@ -37,6 +37,12 @@
     .obs-block { display: grid; gap: 8px; margin: 10px 0 12px 0; }
     .obs-block label { font-size: 12px; color: #475569; font-weight: 700; }
     .obs-block select { margin-top: 4px; }
+    .student-toggle{margin-top:10px;border:1px solid var(--border);border-radius:14px;background:#f8fafc;overflow:hidden}
+    .student-toggle summary{cursor:pointer;list-style:none;padding:10px 12px;font-weight:900;color:#334155;display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .student-toggle summary::-webkit-details-marker{display:none}
+    .student-toggle summary:after{content:'aufklappen';font-size:11px;font-weight:800;color:#64748b;background:#e2e8f0;border-radius:999px;padding:3px 8px}
+    .student-toggle[open] summary:after{content:'zuklappen'}
+    .student-toggle .students{border-top:1px solid var(--border);padding:8px;background:#fff}
 
 </style>
 </head>
@@ -75,8 +81,11 @@
         <div class="row" style="margin-top:8px">
           <button class="primary full" onclick="addNames()">Hinzufügen</button>
         </div>
-        <h3>SuS (<span id="studentCount">0</span>)</h3>
-        <div id="studentList" class="students"><div class="muted">Keine Namen</div></div>
+        <details id="studentListDetails" class="student-toggle">
+          <summary>SuS-Liste / Stärken anzeigen (<span id="studentCount">0</span>)</summary>
+          <div class="muted" style="padding:0 10px 8px 10px">Nur bei Bedarf öffnen – so sind die Stärke-Werte beim Zeigen der Lehrkraftseite nicht sichtbar.</div>
+          <div id="studentList" class="students"><div class="muted">Keine Namen</div></div>
+        </details>
       </div>
 
       <div class="card">
@@ -216,9 +225,11 @@
     <aside class="grid">
       <div class="card">
         <h2>Spielanpassungen bearbeiten</h2>
-        <label>Sportart-Profil<br><select id="sportProfile" style="width:100%" onchange="setSportProfile(this.value)"><option value="general">Allgemein / Teamsport</option><option value="floorball">Floorball / Unihockey</option><option value="football">Fußball</option><option value="basketball">Basketball</option><option value="handball">Handball</option><option value="ultimate">Ultimate / Frisbee</option></select></label>
+        <label>Sportart-Profil<br><select id="sportProfile" style="width:100%" onchange="setSportProfile(this.value)"><option value="general">Allgemein / Teamsport</option><option value="floorball">Floorball / Unihockey / Hockey</option><option value="football">Fußball</option><option value="basketball">Basketball</option><option value="handball">Handball</option><option value="ultimate">Ultimate / Frisbee</option></select></label>
         <label class="row" style="margin-top:12px;gap:9px;align-items:flex-start"><input type="checkbox" id="adaptiveRulesEnabled" onchange="setAdaptiveRulesEnabled(this.checked)"><span><strong>Auswertung mit Pro-/Handicaps aktivieren</strong><br><span class="muted">Aus: Die App dient nur für Teameinteilung, Uhr und Punktetafel. Beteiligungsauswahl und Regelvorschläge werden ausgeblendet.</span></span></label>
-        <div class="row" style="margin-top:8px"><button class="blue" onclick="applySportPreset()">Geeignete Karten für Sportart aktivieren</button><button class="ghost" onclick="activateAllRules()">Alle Karten aktivieren</button></div>
+        <label class="row" style="margin-top:12px;gap:9px;align-items:flex-start"><input type="checkbox" id="generalRuleCardsEnabled" onchange="setGeneralRuleCardsEnabled(this.checked)"><span><strong>Allgemeine Team-/Ausgleichsregeln erlauben</strong><br><span class="muted">Aus: Die App nutzt nur personenbezogene Pro-/Handicaps aus „War oft beteiligt“ und „Kam wenig ins Spiel“.</span></span></label>
+        <div class="notice" style="margin-top:8px">Beim Wechsel der Sportart werden passende Karten automatisch aktiviert und weniger passende deaktiviert.</div>
+        <div class="row" style="margin-top:8px"><button class="ghost" onclick="activateAllRules()">Alle Karten aktivieren</button></div>
         <label class="row" style="margin-top:12px;gap:9px;align-items:flex-start"><input type="checkbox" id="creativeRulesAllowed" onchange="setCreativeRulesAllowed(this.checked)"><span><strong>Spielerische/kreative Handicaps erlauben</strong><br><span class="muted">Dann werden bei passenden Situationen mit erhöhter Wahrscheinlichkeit sichere, spielerische Challenges der gewählten Sportart ausgewählt.</span></span></label>
         <div class="notice" style="margin-top:10px">Regelkarten anpassen, neu erstellen oder deaktivieren. Die App wählt anschließend anhand von Spielstand, Beteiligung und aktiviertem Kartenpool passende Karten aus. In Regeltexten kannst du die Platzhalter {name}, {team} und {otherTeam} verwenden.</div>
         <h3>Neue / ausgewählte Karte</h3>
@@ -272,6 +283,7 @@
   let currentSport = localStorage.getItem('fbph_current_sport') || 'general';
   let creativeRulesAllowed = localStorage.getItem('fbph_creative_rules_allowed') === 'true';
   let adaptiveRulesEnabled = localStorage.getItem('fbph_adaptive_rules_enabled') !== 'false';
+  let generalRuleCardsEnabled = localStorage.getItem('fbph_general_rule_cards_enabled') !== 'false';
   let timers = {};
   const localPendingFields = {}; // verhindert, dass ein alter Live-Snapshot einen gerade gedrückten Timer-Button überschreibt
   let firebaseReady = false;
@@ -353,6 +365,7 @@
     {id:'fun_handball_no_dribble', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['handball'], title:'Ohne Prellen', text:'{name}: Du darfst nicht prellen und musst über Pässe und Freilaufen spielen.', why:'Fördert schnelles Zusammenspiel und reduziert dominante Einzelaktionen.'},
     {id:'fun_handball_bounce_pass', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['handball'], title:'Nur Bodenpässe', text:'{name}: Du darfst nur Bodenpässe spielen.', why:'Leicht erkennbare spielerische Technik-Challenge.'},
     {id:'fun_floorball_weak_side', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['floorball'], title:'Ungewohnte Schlägerseite', text:'{name}: Du führst und spielst den Ball nur auf deiner ungewohnten Schlägerseite.', why:'Spielerische technische Herausforderung ohne Zusatzmaterial.'},
+    {id:'fun_floorball_small_stick', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['floorball'], title:'Kleiner Schläger', text:'{name}: Du spielst in dieser Runde mit einem kürzeren/kleineren Schläger.', why:'Spielerische Hockey-/Floorball-Erschwernis für häufig beteiligte Personen.'},
     {id:'fun_floorball_half_only', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['floorball'], title:'Eigene-Hälfte-Challenge', text:'{name}: Du darfst die eigene Spielfeldhälfte nicht verlassen und nur aus dem Rückraum vorbereiten.', why:'Bremst dominante Laufwege, bleibt auf jedem normalen Spielfeld umsetzbar.'},
     {id:'fun_floorball_no_goal_zone', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'stark', sports:['floorball'], title:'Kein Abschluss vor dem Tor', text:'{name}: Im letzten Drittel vor dem gegnerischen Tor darfst du nicht selbst abschließen, sondern nur vorbereiten.', why:'Starke, klar erkennbare Challenge ohne Zusatzmaterial.'},
     {id:'fun_ultimate_weak_throw', active:true, creative:true, type:'Handicap', target:'dominant', problem:'any', strength:'mittel', sports:['ultimate'], title:'Ungewohnte Wurfseite', text:'{name}: Du wirfst nur mit deiner ungewohnten Wurfseite.', why:'Spielerische sportartspezifische Herausforderung.'},
@@ -439,9 +452,9 @@
 
   const $ = (id) => document.getElementById(id);
   let playerOnlyMode = false;
-  const saveLocal = () => localStorage.setItem('fbph_state', JSON.stringify({students, teams, fields, pairingRound, ruleCards, currentClassName, currentSport, creativeRulesAllowed, adaptiveRulesEnabled}));
+  const saveLocal = () => localStorage.setItem('fbph_state', JSON.stringify({students, teams, fields, pairingRound, ruleCards, currentClassName, currentSport, creativeRulesAllowed, adaptiveRulesEnabled, generalRuleCardsEnabled}));
   const loadLocal = () => {
-    try { const s = JSON.parse(localStorage.getItem('fbph_state') || '{}'); students=s.students||[]; teams=s.teams||[]; fields=s.fields||[]; pairingRound=Number.isInteger(s.pairingRound)?s.pairingRound:0; ruleCards=s.ruleCards||JSON.parse(localStorage.getItem('fbph_rule_cards')||'null')||cloneDefaultRules(); currentClassName=s.currentClassName||''; currentSport=s.currentSport||localStorage.getItem('fbph_current_sport')||'general'; creativeRulesAllowed = typeof s.creativeRulesAllowed==='boolean' ? s.creativeRulesAllowed : (localStorage.getItem('fbph_creative_rules_allowed')==='true'); adaptiveRulesEnabled = typeof s.adaptiveRulesEnabled==='boolean' ? s.adaptiveRulesEnabled : (localStorage.getItem('fbph_adaptive_rules_enabled')!=='false'); sanitizeRuleCardsForNormalFields(); } catch(e){}
+    try { const s = JSON.parse(localStorage.getItem('fbph_state') || '{}'); students=s.students||[]; teams=s.teams||[]; fields=s.fields||[]; pairingRound=Number.isInteger(s.pairingRound)?s.pairingRound:0; ruleCards=s.ruleCards||JSON.parse(localStorage.getItem('fbph_rule_cards')||'null')||cloneDefaultRules(); currentClassName=s.currentClassName||''; currentSport=s.currentSport||localStorage.getItem('fbph_current_sport')||'general'; creativeRulesAllowed = typeof s.creativeRulesAllowed==='boolean' ? s.creativeRulesAllowed : (localStorage.getItem('fbph_creative_rules_allowed')==='true'); adaptiveRulesEnabled = typeof s.adaptiveRulesEnabled==='boolean' ? s.adaptiveRulesEnabled : (localStorage.getItem('fbph_adaptive_rules_enabled')!=='false'); generalRuleCardsEnabled = typeof s.generalRuleCardsEnabled==='boolean' ? s.generalRuleCardsEnabled : (localStorage.getItem('fbph_general_rule_cards_enabled')!=='false'); sanitizeRuleCardsForNormalFields(); } catch(e){}
   };
 
   function makeId(){ return Math.random().toString(36).slice(2,10); }
@@ -870,7 +883,7 @@
   function pickRule({target, desired='mittel', exclude=[], avoidNoGoal=false, maxStrength=null}){
     const desiredVal=strengthScore(desired);
     const maxVal=maxStrength ? strengthScore(maxStrength) : null;
-    const candidates=(ruleCards||[]).filter(r=>r.active!==false && r.target===target && !exclude.includes(r.id) && (!r.creative || creativeRulesAllowed) && (ruleSports(r).includes('general') || ruleSports(r).includes(currentSport) || currentSport==='all') && (!avoidNoGoal || !isNoGoalRule(r)) && (!maxVal || strengthScore(r.strength)<=maxVal));
+    const candidates=(ruleCards||[]).filter(r=>r.active!==false && r.target===target && (generalRuleCardsEnabled || target==='dominant' || target==='low') && !exclude.includes(r.id) && (!r.creative || creativeRulesAllowed) && (ruleSports(r).includes('general') || ruleSports(r).includes(currentSport) || currentSport==='all') && (!avoidNoGoal || !isNoGoalRule(r)) && (!maxVal || strengthScore(r.strength)<=maxVal));
     if(!candidates.length) return null;
 
     // Zuerst nach passender Stärke filtern.
@@ -997,8 +1010,8 @@
     if(lowB.length && rec.length<3){ addPick('low', namesCtx(lowB, {team:teamB, otherTeam:teamA}), 'mittel'); }
 
     // Wenn keine auffälligen Personen eingetragen sind: leichte gemeinsame Challenge.
-    if(rec.length===0){ addPick('all',{team:'Beide Teams'},'leicht') || addPick('team',{team:'Beide Teams'},'mittel'); }
-    if(rec.length===0) rec.push({type:'Teamregel · Kurz', text:'Ein Tor zählt nur, wenn mindestens 3 verschiedene Teammitglieder beteiligt waren.', why:'Mehr Beteiligung im Team.', strength:'mittel'});
+    if(rec.length===0 && generalRuleCardsEnabled){ addPick('all',{team:'Beide Teams'},'leicht') || addPick('team',{team:'Beide Teams'},'mittel'); }
+    if(rec.length===0 && generalRuleCardsEnabled) rec.push({type:'Teamregel · Kurz', text:'Ein Tor zählt nur, wenn mindestens 3 verschiedene Teammitglieder beteiligt waren.', why:'Mehr Beteiligung im Team.', strength:'mittel'});
     return combineSamePersonRules(rec).slice(0,3);
   }
   
@@ -1069,13 +1082,14 @@
     if($('sportProfile')) $('sportProfile').value=currentSport;
     if($('creativeRulesAllowed')) $('creativeRulesAllowed').checked=creativeRulesAllowed;
     if($('adaptiveRulesEnabled')) $('adaptiveRulesEnabled').checked=adaptiveRulesEnabled;
+    if($('generalRuleCardsEnabled')) $('generalRuleCardsEnabled').checked=generalRuleCardsEnabled;
 
     const sportOrder=['general','football','handball','basketball','floorball','ultimate','multi'];
     const strengthOrder=['stark','mittel','leicht'];
     const strengthLabel={stark:'stark',mittel:'mittel',leicht:'leicht'};
     const sportGroupLabel={
       general:'Allgemein / Teamsport', football:'Fußball', handball:'Handball',
-      basketball:'Basketball', floorball:'Floorball / Unihockey', ultimate:'Ultimate / Frisbee',
+      basketball:'Basketball', floorball:'Floorball / Unihockey / Hockey', ultimate:'Ultimate / Frisbee',
       multi:'Mehrere Sportarten'
     };
     function primarySportGroup(rule){
@@ -1117,18 +1131,23 @@
   }
   function ruleTargetLabel(v){ return ({dominant:'Person war oft beteiligt', low:'Person kam wenig ins Spiel', team:'Teamregel', leading:'führendes Team', trailing:'zurückliegendes Team', all:'Zusatzchallenge'}[v]||v||''); }
   function problemLabel(v){ return ({any:'egal', solo:'Soloaktionen', passes:'Passspiel', pressure:'Druck', uneven:'unausgeglichen', rules:'Regelstreit', ok:'alle beteiligt'}[v]||v||''); }
-  function sportLabel(v){ return ({general:'allgemein',floorball:'Floorball',football:'Fußball',basketball:'Basketball',handball:'Handball',ultimate:'Ultimate',all:'alle'}[v]||v); }
-  window.setSportProfile=function(v){ currentSport=v||'general'; localStorage.setItem('fbph_current_sport', currentSport); saveLocal(); renderRuleEditor(); notify('Sportart-Profil gesetzt. Aktive Karten bleiben unverändert.'); };
+  function sportLabel(v){ return ({general:'allgemein',floorball:'Floorball/Hockey',football:'Fußball',basketball:'Basketball',handball:'Handball',ultimate:'Ultimate',all:'alle'}[v]||v); }
+  window.setSportProfile=function(v){ currentSport=v||'general'; localStorage.setItem('fbph_current_sport', currentSport); applySportPreset(true); };
   window.setCreativeRulesAllowed=function(v){ creativeRulesAllowed=!!v; localStorage.setItem('fbph_creative_rules_allowed', String(creativeRulesAllowed)); saveLocal(); renderRuleEditor(); pushLiveRules(); notify(creativeRulesAllowed?'Spielerische Handicaps sind erlaubt.':'Spielerische Handicaps sind ausgeschaltet.'); };
   window.setAdaptiveRulesEnabled=function(v){
     adaptiveRulesEnabled=!!v; localStorage.setItem('fbph_adaptive_rules_enabled', String(adaptiveRulesEnabled));
     if(!adaptiveRulesEnabled){ fields.forEach(f=>{ f.recommendations=[]; f.lastObservation=null; f.observationDraft={domA:['',''],lowA:['',''],domB:['',''],lowB:['','']}; markFieldChanged(f); }); }
     saveLocal(); renderAll(); pushLiveRules(); pushLiveFields(); notify(adaptiveRulesEnabled?'Auswertung mit Pro-/Handicaps ist aktiviert.':'Nur Teameinteilung, Uhr und Punktetafel sind aktiv.');
   };
-  window.applySportPreset=function(){
+  window.setGeneralRuleCardsEnabled=function(v){
+    generalRuleCardsEnabled=!!v; localStorage.setItem('fbph_general_rule_cards_enabled', String(generalRuleCardsEnabled));
+    if(!generalRuleCardsEnabled){ fields.forEach(f=>{ f.recommendations=[]; f.lastObservation=null; markFieldChanged(f); }); }
+    saveLocal(); renderAll(); pushLiveRules(); pushLiveFields(); notify(generalRuleCardsEnabled?'Allgemeine Team-/Ausgleichsregeln sind aktiv.':'Nur individuelle Pro-/Handicaps sind aktiv.');
+  };
+  window.applySportPreset=function(silent=false){
     const sport=$('sportProfile')?.value || currentSport || 'general'; currentSport=sport; localStorage.setItem('fbph_current_sport', currentSport);
     ruleCards.forEach(r=>{ const sp=ruleSports(r); r.active = sp.includes('general') || sp.includes(sport) || !defaultRuleByBase(r.id); });
-    localStorage.setItem('fbph_rule_cards', JSON.stringify(ruleCards)); saveLocal(); renderRuleEditor(); pushLiveRules(); notify('Geeignete Karten für '+sportLabel(currentSport)+' aktiviert.');
+    localStorage.setItem('fbph_rule_cards', JSON.stringify(ruleCards)); saveLocal(); renderRuleEditor(); pushLiveRules(); if(!silent) notify('Karten für '+sportLabel(currentSport)+' automatisch umgestellt.');
   };
   window.activateAllRules=function(){ ruleCards.forEach(r=>r.active=true); localStorage.setItem('fbph_rule_cards', JSON.stringify(ruleCards)); saveLocal(); renderRuleEditor(); pushLiveRules(); notify('Alle Karten aktiviert.'); };
   window.toggleRuleActive=function(id, checked){
@@ -1306,7 +1325,7 @@
     if(!teams.length || !fields.length) return notify('Erst Teams/Felder erstellen.', true);
     currentRoom = ($('roomCode').value.trim().toUpperCase() || `TEAM-${makeCode(3)}`).replace(/\s+/g,'-'); $('roomCode').value=currentRoom;
     fields = fields.map(f => ({...f, timer: ensureFieldTimer(f), updatedAtMs: f.updatedAtMs || nowMs(), updatedAt: f.updatedAt || nowIso()}));
-    const session={roomCode:currentRoom, className:currentClassName||$('className').value||'Klasse', teacherPin, createdAt:nowIso(), updatedAt:nowIso(), expiresAt:new Date(Date.now()+4*60*60*1000).toISOString(), students, teams, fields, ruleCards, settings:{roundMinutes:parseInt($('roundMinutes').value)||4, fieldCount:parseInt($('fieldCount').value)||3, pairingRound, currentSport, creativeRulesAllowed, adaptiveRulesEnabled}};
+    const session={roomCode:currentRoom, className:currentClassName||$('className').value||'Klasse', teacherPin, createdAt:nowIso(), updatedAt:nowIso(), expiresAt:new Date(Date.now()+4*60*60*1000).toISOString(), students, teams, fields, ruleCards, settings:{roundMinutes:parseInt($('roundMinutes').value)||4, fieldCount:parseInt($('fieldCount').value)||3, pairingRound, currentSport, creativeRulesAllowed, adaptiveRulesEnabled, generalRuleCardsEnabled}};
     await fb.setDoc(fb.doc(db,'teamsportSessions',currentRoom), session);
     subscribeRoom(currentRoom); updateModePill(); $('roomInfo').innerHTML=`Raumcode: <span class="copy">${currentRoom}</span> · PIN lokal: <span class="copy">${teacherPin}</span> · Ablauf: ${new Date(session.expiresAt).toLocaleTimeString('de-DE')}`; notify('Live-Session erstellt.'); showIpadJoinAccess();
   };
@@ -1328,7 +1347,7 @@
     if(liveUnsub) liveUnsub();
     liveUnsub = fb.onSnapshot(fb.doc(db,'teamsportSessions',code),(snap)=>{
       if(!snap.exists()) { notify('Live-Session wurde gelöscht.', true); currentRoom=''; updateModePill(); return; }
-      const d=snap.data(); students=d.students||students; teams=d.teams||teams; fields=mergeIncomingFields(d.fields||fields); ruleCards=d.ruleCards||ruleCards; currentClassName=d.className||currentClassName; if(Number.isInteger(d.settings?.pairingRound)) pairingRound=d.settings.pairingRound; if(d.settings?.currentSport) currentSport=d.settings.currentSport; if(typeof d.settings?.creativeRulesAllowed==='boolean') creativeRulesAllowed=d.settings.creativeRulesAllowed; if(typeof d.settings?.adaptiveRulesEnabled==='boolean') adaptiveRulesEnabled=d.settings.adaptiveRulesEnabled; if(typeof d.settings?.adaptiveRulesEnabled==='boolean') adaptiveRulesEnabled=d.settings.adaptiveRulesEnabled; renderAll(); refreshJoinedField(); updateTimerDisplays(); updateModePill();
+      const d=snap.data(); students=d.students||students; teams=d.teams||teams; fields=mergeIncomingFields(d.fields||fields); ruleCards=d.ruleCards||ruleCards; currentClassName=d.className||currentClassName; if(Number.isInteger(d.settings?.pairingRound)) pairingRound=d.settings.pairingRound; if(d.settings?.currentSport) currentSport=d.settings.currentSport; if(typeof d.settings?.creativeRulesAllowed==='boolean') creativeRulesAllowed=d.settings.creativeRulesAllowed; if(typeof d.settings?.adaptiveRulesEnabled==='boolean') adaptiveRulesEnabled=d.settings.adaptiveRulesEnabled; if(typeof d.settings?.generalRuleCardsEnabled==='boolean') generalRuleCardsEnabled=d.settings.generalRuleCardsEnabled; renderAll(); refreshJoinedField(); updateTimerDisplays(); updateModePill();
     });
   }
   async function pushLiveField(f){
@@ -1343,7 +1362,7 @@
   async function pushLiveRules(){
     saveLocal();
     if(!currentRoom || !firebaseReady) return;
-    try{ await fb.updateDoc(fb.doc(db,'teamsportSessions',currentRoom), {ruleCards, 'settings.currentSport':currentSport, 'settings.creativeRulesAllowed':creativeRulesAllowed, 'settings.adaptiveRulesEnabled':adaptiveRulesEnabled, updatedAt:nowIso()}); }catch(e){ console.warn(e); }
+    try{ await fb.updateDoc(fb.doc(db,'teamsportSessions',currentRoom), {ruleCards, 'settings.currentSport':currentSport, 'settings.creativeRulesAllowed':creativeRulesAllowed, 'settings.adaptiveRulesEnabled':adaptiveRulesEnabled, 'settings.generalRuleCardsEnabled':generalRuleCardsEnabled, updatedAt:nowIso()}); }catch(e){ console.warn(e); }
   }
   window.deleteLiveSession=async function(){
     if(!currentRoom || !firebaseReady) return notify('Keine Live-Session aktiv.', true);
@@ -1359,7 +1378,7 @@
     if(!firebaseReady){ const ok=await initFirebaseFromConfig(getPreferredFirebaseConfigText(true)); if(!ok) return; }
     const code=$('joinRoomCode').value.trim().toUpperCase(); if(!code) return notify('Raumcode eingeben.', true);
     const snap=await fb.getDoc(fb.doc(db,'teamsportSessions',code)); if(!snap.exists()) return notify('Raum nicht gefunden.', true);
-    currentRoom=code; const d=snap.data(); students=d.students||[]; teams=d.teams||[]; fields=d.fields||[]; ruleCards=d.ruleCards||ruleCards; if(d.settings?.roundMinutes) $('roundMinutes').value=d.settings.roundMinutes; if(Number.isInteger(d.settings?.pairingRound)) pairingRound=d.settings.pairingRound; if(d.settings?.currentSport) currentSport=d.settings.currentSport; if(typeof d.settings?.creativeRulesAllowed==='boolean') creativeRulesAllowed=d.settings.creativeRulesAllowed; if(typeof d.settings?.adaptiveRulesEnabled==='boolean') adaptiveRulesEnabled=d.settings.adaptiveRulesEnabled;
+    currentRoom=code; const d=snap.data(); students=d.students||[]; teams=d.teams||[]; fields=d.fields||[]; ruleCards=d.ruleCards||ruleCards; if(d.settings?.roundMinutes) $('roundMinutes').value=d.settings.roundMinutes; if(Number.isInteger(d.settings?.pairingRound)) pairingRound=d.settings.pairingRound; if(d.settings?.currentSport) currentSport=d.settings.currentSport; if(typeof d.settings?.creativeRulesAllowed==='boolean') creativeRulesAllowed=d.settings.creativeRulesAllowed; if(typeof d.settings?.adaptiveRulesEnabled==='boolean') adaptiveRulesEnabled=d.settings.adaptiveRulesEnabled; if(typeof d.settings?.generalRuleCardsEnabled==='boolean') generalRuleCardsEnabled=d.settings.generalRuleCardsEnabled;
     renderAll();
     subscribeRoom(code);
     updateJoinFieldSelect();
@@ -1384,7 +1403,7 @@
 
   // Init
   loadLocal(); if(localStorage.getItem('fbph_default_sport_v33')!=='1'){ currentSport='general'; localStorage.setItem('fbph_current_sport','general'); localStorage.setItem('fbph_default_sport_v33','1'); saveLocal(); } if(!ruleCards || !ruleCards.length) ruleCards=cloneDefaultRules(); mergeMissingDefaultRules(); sanitizeRuleCardsForNormalFields(); refreshClassSelect(); $('firebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; $('joinFirebaseConfigInput').value=localStorage.getItem('fbph_firebase_config')||DEFAULT_FIREBASE_CONFIG_TEXT; renderAll(); if($('sportProfile')) $('sportProfile').value=currentSport; if($('creativeRulesAllowed')) $('creativeRulesAllowed').checked=creativeRulesAllowed;
-    if($('adaptiveRulesEnabled')) $('adaptiveRulesEnabled').checked=adaptiveRulesEnabled; updateModePill(); updateJoinFieldSelect(); handleDeepLinkJoin();
+    if($('adaptiveRulesEnabled')) $('adaptiveRulesEnabled').checked=adaptiveRulesEnabled; if($('generalRuleCardsEnabled')) $('generalRuleCardsEnabled').checked=generalRuleCardsEnabled; updateModePill(); updateJoinFieldSelect(); handleDeepLinkJoin();
 
 </script>
 </body>
