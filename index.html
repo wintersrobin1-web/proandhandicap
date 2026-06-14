@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Teamsport Assistent – Offline & Live v39</title>
+  <title>Teamsport Assistent – Offline & Live v40</title>
   <style>
     :root{
       --green:#16a34a; --green-dark:#15803d; --green-soft:#ecfdf5;
@@ -82,7 +82,7 @@
           <button class="primary full" onclick="addNames()">Hinzufügen</button>
         </div>
         <details id="studentListDetails" class="student-toggle">
-          <summary>SuS-Liste / Stärken anzeigen (<span id="studentCount">0</span>)</summary>
+          <summary>SuS-Liste (<span id="studentCount">0</span>)</summary>
           <div class="muted" style="padding:0 10px 8px 10px">Nur bei Bedarf öffnen – so sind die Stärke-Werte beim Zeigen der Lehrkraftseite nicht sichtbar.</div>
           <div id="studentList" class="students"><div class="muted">Keine Namen</div></div>
         </details>
@@ -225,14 +225,14 @@
     <aside class="grid">
       <div class="card">
         <h2>Spielanpassungen bearbeiten</h2>
-        <label>Sportart-Profil<br><select id="sportProfile" style="width:100%" onchange="setSportProfile(this.value)"><option value="general">Allgemein / Teamsport</option><option value="floorball">Floorball / Unihockey / Hockey</option><option value="football">Fußball</option><option value="basketball">Basketball</option><option value="handball">Handball</option><option value="ultimate">Ultimate / Frisbee</option></select></label>
+        <label>Sportart-Profil<br><select id="sportProfile" style="width:100%" onchange="setSportProfile(this.value)"><option value="general">Teamsport (allgemein)</option><option value="floorball">Floorball / Unihockey / Hockey</option><option value="football">Fußball</option><option value="basketball">Basketball</option><option value="handball">Handball</option><option value="ultimate">Ultimate / Frisbee</option></select></label>
         <label class="row" style="margin-top:12px;gap:9px;align-items:flex-start"><input type="checkbox" id="adaptiveRulesEnabled" onchange="setAdaptiveRulesEnabled(this.checked)"><span><strong>Auswertung mit Pro-/Handicaps aktivieren</strong><br><span class="muted">Aus: Die App dient nur für Teameinteilung, Uhr und Punktetafel. Beteiligungsauswahl und Regelvorschläge werden ausgeblendet.</span></span></label>
         <label class="row" style="margin-top:12px;gap:9px;align-items:flex-start"><input type="checkbox" id="generalRuleCardsEnabled" onchange="setGeneralRuleCardsEnabled(this.checked)"><span><strong>Allgemeine Team-/Ausgleichsregeln erlauben</strong><br><span class="muted">Aus: Die App nutzt nur personenbezogene Pro-/Handicaps aus „War oft beteiligt“ und „Kam wenig ins Spiel“.</span></span></label>
         <div class="notice" style="margin-top:8px">Beim Wechsel der Sportart werden passende Karten automatisch aktiviert und weniger passende deaktiviert.</div>
         <div class="row" style="margin-top:8px"><button class="ghost" onclick="activateAllRules()">Alle Karten aktivieren</button></div>
         <label class="row" style="margin-top:12px;gap:9px;align-items:flex-start"><input type="checkbox" id="creativeRulesAllowed" onchange="setCreativeRulesAllowed(this.checked)"><span><strong>Spielerische/kreative Handicaps erlauben</strong><br><span class="muted">Dann werden bei passenden Situationen mit erhöhter Wahrscheinlichkeit sichere, spielerische Challenges der gewählten Sportart ausgewählt.</span></span></label>
         <div class="notice" style="margin-top:10px">Regelkarten anpassen, neu erstellen oder deaktivieren. Die App wählt anschließend anhand von Spielstand, Beteiligung und aktiviertem Kartenpool passende Karten aus. In Regeltexten kannst du die Platzhalter {name}, {team} und {otherTeam} verwenden.</div>
-        <h3>Neue / ausgewählte Karte</h3>
+        <h3>Karte bearbeiten / hinzufügen</h3>
         <input type="hidden" id="ruleId" />
         <label>Aktiv <input type="checkbox" id="ruleActive" checked></label>
         <div class="two" style="margin-top:8px">
@@ -245,7 +245,7 @@
         <div style="margin-top:10px">
           <div style="font-weight:700;margin-bottom:6px">Geeignet für (Mehrfachauswahl möglich)</div>
           <div id="ruleSportsChoices" class="two" style="gap:6px 14px">
-            <label class="row" style="gap:7px"><input type="checkbox" value="general" class="rule-sport-check"><span>Allgemein / Teamsport</span></label>
+            <label class="row" style="gap:7px"><input type="checkbox" value="general" class="rule-sport-check"><span>Teamsport (allgemein)</span></label>
             <label class="row" style="gap:7px"><input type="checkbox" value="football" class="rule-sport-check"><span>Fußball</span></label>
             <label class="row" style="gap:7px"><input type="checkbox" value="handball" class="rule-sport-check"><span>Handball</span></label>
             <label class="row" style="gap:7px"><input type="checkbox" value="basketball" class="rule-sport-check"><span>Basketball</span></label>
@@ -1088,7 +1088,7 @@
     const strengthOrder=['stark','mittel','leicht'];
     const strengthLabel={stark:'stark',mittel:'mittel',leicht:'leicht'};
     const sportGroupLabel={
-      general:'Allgemein / Teamsport', football:'Fußball', handball:'Handball',
+      general:'Teamsport (allgemein)', football:'Fußball', handball:'Handball',
       basketball:'Basketball', floorball:'Floorball / Unihockey / Hockey', ultimate:'Ultimate / Frisbee',
       multi:'Mehrere Sportarten'
     };
