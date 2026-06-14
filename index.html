@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Teamsport Assistent – Offline & Live v46</title>
+  <title>Teamsport Assistent – Offline & Live v47</title>
   <style>
     :root{
       --green:#16a34a; --green-dark:#15803d; --green-soft:#ecfdf5;
@@ -39,6 +39,7 @@
     .obs-block select { margin-top: 4px; }
     .student-toggle{margin-top:10px;border:1px solid var(--border);border-radius:14px;background:#f8fafc;overflow:hidden}
     .student-toggle summary{cursor:pointer;list-style:none;padding:10px 12px;font-weight:900;color:#334155;display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .student-summary-label{display:inline-flex;align-items:center;gap:0;white-space:nowrap}
     .student-toggle summary::-webkit-details-marker{display:none}
     .student-toggle summary:after{content:'aufklappen';font-size:11px;font-weight:800;color:#64748b;background:#e2e8f0;border-radius:999px;padding:3px 8px}
     .student-toggle[open] summary:after{content:'zuklappen'}
@@ -81,7 +82,7 @@
           <button class="primary full" onclick="addNames()">Hinzufügen</button>
         </div>
         <details id="studentListDetails" class="student-toggle">
-          <summary>SuS-Liste (<span id="studentCount">0</span>)</summary>
+          <summary><span class="student-summary-label">SuS-Liste (<span id="studentCount">0</span>)</span></summary>
           <div class="muted" style="padding:0 10px 8px 10px">Nur bei Bedarf öffnen – so sind die Stärke-Werte beim Zeigen der Lehrkraftseite nicht sichtbar.</div>
           <div id="studentList" class="students"><div class="muted">Keine Namen</div></div>
         </details>
