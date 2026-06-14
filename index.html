@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Teamsport Assistent – Offline & Live v45</title>
+  <title>Teamsport Assistent – Offline & Live v46</title>
   <style>
     :root{
       --green:#16a34a; --green-dark:#15803d; --green-soft:#ecfdf5;
@@ -419,14 +419,18 @@
       t_pass_zone:{title:'Eigene Hälfte schützt', text:'{team}: In eurer eigenen Hälfte habt ihr nach Ballannahme 3 Sekunden Schutz.', why:'Reduziert Druck und braucht keine Zusatzmarkierungen.'},
       c_ok_sides:{title:'Nächste Challenge: Seitenwechsel', text:'Tor zählt nur, wenn der Ball vorher einmal von einer Spielfeldseite auf die andere gespielt wurde.', why:'Wenn Beteiligung klappt, wird das Zusammenspiel taktisch anspruchsvoller.'}
     };
+    // Problematische Alt-Karten werden nicht nur deaktiviert, sondern komplett aus dem Pool entfernt,
+    // damit sie auch nicht mehr als inaktive Karten in der Übersicht erscheinen.
     ruleCards=(ruleCards||[]).map(card=>{
       const base=baseRuleId(card.id);
-      if(obsoleteBases.has(base)) return {...card, active:false};
       if(patches[base]) return {...card, ...patches[base]};
+      return card;
+    }).filter(card=>{
+      const base=baseRuleId(card.id);
+      if(obsoleteBases.has(base)) return false;
       const text=String(card.text||'').toLowerCase();
       const title=String(card.title||'').toLowerCase();
-      // Alte oder didaktisch unklare Karten aus früheren Versionen konsequent deaktivieren.
-      if(
+      return !(
         text.includes('passzone') ||
         title.includes('passzone') ||
         text.includes('markierte zone') ||
@@ -449,9 +453,9 @@
         title.includes('erst passen, dann wieder angreifen') ||
         text.includes('nach jedem eigenen ballkontakt musst du zunächst abspielen') ||
         title.includes('banktor nur nach pass') ||
+        title.includes('banktor') ||
         text.includes('ein tor zählt nur, wenn der letzte ball vor dem abschluss ein pass war')
-      ) return {...card, active:false};
-      return card;
+      );
     });
   }
 
